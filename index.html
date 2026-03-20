@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 Fantasy Baseball — Top 200 Advanced Analytics Rankings</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1f2b;
+    --border: #252a36;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --green: #22c55e;
+    --green-dim: #16a34a22;
+    --red: #ef4444;
+    --red-dim: #dc262622;
+    --amber: #f59e0b;
+    --amber-dim: #d9770622;
+    --blue: #3b82f6;
+    --blue-dim: #2563eb22;
+    --tier1: #ffd700;
+    --tier2: #e2e8f0;
+    --tier3: #94a3b8;
+    --tier4: #64748b;
+    --tier5: #475569;
+    --accent: #06b6d4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #0d0f14 0%, #131926 50%, #0d0f14 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 24px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .subtitle {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .search {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    width: 200px;
+    outline: none;
+  }
+  .search:focus { border-color: var(--accent); }
+  .search::placeholder { color: var(--muted); }
+
+  .filter-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .badge-regress { background: var(--red-dim); color: var(--red); border: 1px solid #ef444433; }
+  .badge-improve { background: var(--green-dim); color: var(--green); border: 1px solid #22c55e33; }
+  .badge-watch   { background: var(--amber-dim); color: var(--amber); border: 1px solid #f59e0b33; }
+  .badge-lock    { background: var(--blue-dim); color: var(--blue); border: 1px solid #3b82f633; }
+
+  .table-wrapper {
+    overflow-x: auto;
+    padding: 0 0 40px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+  }
+
+  thead th {
+    background: var(--surface);
+    padding: 10px 12px;
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--text); }
+
+  tr { border-bottom: 1px solid #1a1f2b; transition: background 0.1s; }
+  tr:hover { background: var(--surface2); }
+
+  td {
+    padding: 9px 12px;
+    vertical-align: middle;
+  }
+
+  .rank {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: var(--muted);
+    width: 40px;
+    text-align: right;
+    padding-right: 16px;
+  }
+
+  .rank-tier1 { color: var(--tier1); }
+  .rank-tier2 { color: var(--tier2); }
+  .rank-tier3 { color: var(--tier3); }
+  .rank-tier4 { color: var(--tier4); }
+
+  .player-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .team-pos {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .pos-badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 600;
+    margin-right: 4px;
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .metric-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    text-align: center;
+  }
+
+  .metric-val.good { color: var(--green); }
+  .metric-val.bad  { color: var(--red); }
+  .metric-val.warn { color: var(--amber); }
+  .metric-val.na   { color: var(--muted); }
+
+  .analysis-cell {
+    font-size: 11px;
+    color: #94a3b8;
+    max-width: 360px;
+    line-height: 1.45;
+  }
+
+  .tier-divider td {
+    background: var(--surface);
+    padding: 6px 12px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .flags-cell { min-width: 100px; }
+
+  .hidden { display: none !important; }
+
+  .count-display {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 8px 24px 4px;
+  }
+
+  .key-metric {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .key-metric span { color: var(--text); }
+
+  /* ── DRAFTED STATE ── */
+  tr.drafted td { opacity: 0.35; }
+  tr.drafted .player-name {
+    text-decoration: line-through;
+    text-decoration-color: var(--red);
+    text-decoration-thickness: 2px;
+    color: var(--muted);
+  }
+  tr.drafted .rank { color: var(--muted) !important; }
+
+  .drafted-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #1a0808;
+    color: var(--red);
+    border: 1px solid #ef444444;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .draft-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .draft-btn:hover { border-color: var(--red); color: var(--red); background: #1a0808; }
+  tr.drafted .draft-btn { border-color: #333; color: #444; }
+  tr.drafted .draft-btn:hover { border-color: var(--green); color: var(--green); background: #0a1a0a; }
+
+  .draft-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .draft-counter strong {
+    color: var(--red);
+    font-size: 14px;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 1px;
+  }
+
+  .clear-btn {
+    background: transparent;
+    border: 1px solid #333;
+    color: #444;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    transition: all 0.15s;
+  }
+  .clear-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .filter-btn.drafted-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
+
+  /* ── MY TEAM DASHBOARD ── */
+  .dashboard {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .dash-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 160px;
+  }
+
+  .dash-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+
+  /* Roster slots */
+  .roster-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 5px;
+    flex: 1;
+    min-width: 300px;
+  }
+
+  .slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 8px;
+    min-height: 34px;
+    transition: border-color 0.15s;
+  }
+  .slot.filled { border-color: #06b6d433; background: #06b6d408; }
+  .slot.needed { border-color: #f59e0b44; background: #f59e0b08; animation: pulse-amber 2s infinite; }
+
+  @keyframes pulse-amber {
+    0%, 100% { border-color: #f59e0b44; }
+    50% { border-color: #f59e0baa; }
+  }
+
+  .slot-pos {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--muted);
+    min-width: 28px;
+  }
+  .slot.filled .slot-pos { color: var(--accent); }
+
+  .slot-name {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .slot.filled .slot-name { color: var(--text); }
+  .slot.needed .slot-name { color: var(--amber); font-style: italic; }
+
+  /* Category meters */
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    min-width: 280px;
+  }
+
+  .cat-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .cat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .cat-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+
+  .cat-grade {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+  .cat-grade.A { color: var(--green); }
+  .cat-grade.B { color: #86efac; }
+  .cat-grade.C { color: var(--amber); }
+  .cat-grade.D { color: #f97316; }
+  .cat-grade.F { color: var(--red); }
+
+  .cat-bar-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .cat-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+  .cat-bar-fill.A { background: var(--green); }
+  .cat-bar-fill.B { background: #86efac; }
+  .cat-bar-fill.C { background: var(--amber); }
+  .cat-bar-fill.D { background: #f97316; }
+  .cat-bar-fill.F { background: var(--red); }
+
+  /* Recommendation panel */
+  .rec-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    min-width: 240px;
+    max-width: 340px;
+    flex: 1;
+  }
+
+  .rec-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .rec-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .rec-item:last-child { border-bottom: none; }
+
+  .rec-icon {
+    font-size: 14px;
+    min-width: 18px;
+    margin-top: 1px;
+  }
+
+  .rec-text { color: #94a3b8; }
+  .rec-text strong { color: var(--text); }
+
+  .rec-empty {
+    color: var(--green);
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px 0;
+  }
+
+  /* MY PICK row highlight */
+  tr.my-pick { background: #06b6d40a !important; }
+  tr.my-pick td { opacity: 1 !important; }
+  tr.my-pick .player-name {
+    color: var(--accent) !important;
+    text-decoration: none !important;
+  }
+  tr.my-pick .rank { color: var(--accent) !important; }
+
+  .my-pick-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #06b6d415;
+    color: var(--accent);
+    border: 1px solid #06b6d444;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .pick-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pick-btn:hover { border-color: var(--accent); color: var(--accent); background: #06b6d410; }
+
+  .my-picks-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #06b6d415;
+    border: 1px solid #06b6d444;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+  .my-picks-counter strong {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="title">2026 FANTASY TOP 200</div>
+    <div class="subtitle">H2H · 12-TEAM · OBP · DAILY MOVES · ADVANCED METRICS CALIBRATED</div>
+  </div>
+  <div class="controls">
+    <input class="search" type="text" id="searchBox" placeholder="Search player or team…" oninput="filterTable()">
+    <button class="filter-btn active" onclick="filterByFlag('ALL',this)">ALL (201)</button>
+    <button class="filter-btn" onclick="filterByFlag('REGRESS',this)">⬇ REGRESSION</button>
+    <button class="filter-btn" onclick="filterByFlag('IMPROVE',this)">⬆ IMPROVEMENT</button>
+    <button class="filter-btn" onclick="filterByFlag('WATCH',this)">⚠ WATCH</button>
+    <button class="filter-btn" onclick="filterByFlag('H',this)">HITTERS</button>
+    <button class="filter-btn" onclick="filterByFlag('SP',this)">STARTERS</button>
+    <button class="filter-btn" onclick="filterByFlag('RP',this)">CLOSERS</button>
+    <button class="filter-btn drafted-btn" onclick="filterByFlag('DRAFTED',this)">✗ DRAFTED</button>
+    <button class="filter-btn" onclick="filterByFlag('AVAILABLE',this)">AVAILABLE</button>
+    <button class="filter-btn" onclick="filterByFlag('MYPICKS',this)">★ MY PICKS</button>
+    <div class="draft-counter">
+      <strong id="draftedCount">0</strong> drafted
+    </div>
+    <div class="my-picks-counter">
+      <strong id="myPicksCount">0</strong> my picks
+    </div>
+    <button class="clear-btn" onclick="clearAllDrafted()">RESET ALL</button>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="badge badge-regress">⬇ REGRESS</span> Surface stats outrun underlying metrics — negative correction likely</div>
+  <div class="legend-item"><span class="badge badge-improve">⬆ IMPROVE</span> Underlying metrics better than surface stats — positive correction likely</div>
+  <div class="legend-item"><span class="badge badge-watch">⚠ WATCH</span> Mixed signals — volatility in either direction</div>
+  <div class="legend-item"><span class="badge badge-lock">✦ LOCKED</span> Metrics and surface stats fully aligned — safe floor</div>
+</div>
+
+<!-- LIVE TEAM DASHBOARD -->
+<div class="dashboard" id="teamDashboard">
+  <div class="dash-section" style="flex:0 0 auto">
+    <div class="dash-label">MY ROSTER</div>
+    <div id="rosterGrid" class="roster-grid"></div>
+  </div>
+  <div class="dash-section" style="flex:0 0 auto">
+    <div class="dash-label">CATEGORY STRENGTH</div>
+    <div id="catGrid" class="cat-grid"></div>
+  </div>
+  <div class="dash-section" style="flex:1">
+    <div class="dash-label">NEXT PICK GUIDANCE</div>
+    <div id="recPanel" class="rec-panel">
+      <div class="rec-empty">Mark your picks to get live recommendations →</div>
+    </div>
+  </div>
+</div>
+
+<div class="count-display" id="countDisplay">Showing 200 of 200 players</div>
+
+<div class="table-wrapper">
+<table id="rankingsTable">
+<thead>
+<tr>
+  <th>#</th>
+  <th>PLAYER</th>
+  <th>TYPE</th>
+  <th>KEY METRIC 1</th>
+  <th>KEY METRIC 2</th>
+  <th>KEY METRIC 3</th>
+  <th>FLAG</th>
+  <th>ADVANCED ANALYSIS</th>
+  <th>STATUS</th>
+</tr>
+</thead>
+<tbody id="tableBody">
+</tbody>
+</table>
+</div>
+
+<script>
+// ── DRAFT STATE ──────────────────────────────────────────────
+const STORAGE_KEY = 'fantasyDraftedPlayers2026';
+let draftedSet = new Set();
+
+function loadDraftState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) draftedSet = new Set(JSON.parse(saved));
+  } catch(e) { draftedSet = new Set(); }
+  updateDraftCounter();
+}
+
+function saveDraftState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...draftedSet]));
+  } catch(e) { console.warn('Could not save draft state', e); }
+}
+
+function toggleDrafted(rank) {
+  if (draftedSet.has(rank)) {
+    draftedSet.delete(rank);
+  } else {
+    draftedSet.add(rank);
+  }
+  saveDraftState();
+  updateDraftCounter();
+  applyFilters();
+}
+
+function clearAllDrafted() {
+  draftedSet.clear();
+  myPickSet.clear();
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(MY_PICKS_KEY);
+  } catch(e) {}
+  updateCounters();
+  updateDashboard();
+  applyFilters();
+}
+
+function updateDraftCounter() {
+  document.getElementById('draftedCount').textContent = draftedSet.size;
+}
+// ─────────────────────────────────────────────────────────────
+
+const players = [
+  // TIER 1 — UNTOUCHABLE (1-5)
+  {rank:1, name:"Aaron Judge", team:"NYY", pos:"OF", type:"H", m1:"BB%: 19.7%", m1c:"good", m2:"Barrel: 21.3%", m2c:"good", m3:"xwOBA: .490", m3c:"good", flag:"LOCK", analysis:"As a pure hitter — the best in baseball. Led MLB in AVG, OBP, SLG, and OPS+ in 2025. 19.7% walk rate is one of the highest in baseball history for a power hitter; his OBP is walk-anchored and contributes every single week. 53 HR backed by all-time elite barrel rate. Without Ohtani's combined two-way value, Judge is the clear #1 hitter."},
+  {rank:2, name:"Bobby Witt Jr.", team:"KC", pos:"SS", type:"H", m1:"Sprint: 30.5 ft/s", m1c:"good", m2:"Barrel: 9.8%", m2c:"good", m3:"BB%: 6.1%", m3c:"warn", flag:"WATCH", analysis:"The walk rate is legitimately low (6.1%) and OBP (≈.330) is the one weakness in this format — fractionally less dominant here than in standard leagues. Sprint speed is elite-tier: the 30-40 SB projection is backed by raw physics. True 30/40 ceiling despite the OBP discount."},
+  {rank:3, name:"Shohei Ohtani (DH)", team:"LAD", pos:"DH", type:"H", m1:"BB%: 17.3%", m1c:"good", m2:"Barrel: 18.1%", m2c:"good", m3:"xwOBA: .460", m3c:"good", flag:"LOCK", analysis:"HITTER ONLY in your split league. Without the pitching value, Ohtani DH is still an elite top-5 hitter — 50 HR, 15-20 SB, .400+ OBP, all-time barrel rate. His xwOBA (.460) is the highest in baseball. Walk rate (17%+) makes his OBP the most stable in the game. He slots behind Judge as a pure hitter because Judge has comparable or better counting stat upside without the IP uncertainty of splitting a two-way player."},
+  {rank:4, name:"Juan Soto", team:"NYM", pos:"OF", type:"H", m1:"BB%: 19.4%", m1c:"good", m2:"xwOBA: .440", m2c:"good", m3:"xBA vs. actual gap", m3c:"good", flag:"IMPROVE", analysis:"2025 AVG (.255) meaningfully trailed his xBA (.278). BABIP was unlucky — xwOBA of .440 is rarefied air. OBP should return above .400 in 2026 as BABIP normalizes. Career 19%+ walk rate anchors OBP every week. Pure buy in OBP formats."},
+  {rank:5, name:"Jose Ramirez", team:"CLE", pos:"3B", type:"H", m1:"BB%: 9.2%", m1c:"good", m2:"Barrel: 11.7%", m2c:"good", m3:"Sprint: 27.8 ft/s", m3c:"good", flag:"LOCK", analysis:"The safest multi-category pick in baseball. Consistent 30 HR / 40 SB / .340 OBP for four straight seasons. Barrel rate is legitimate, sprint speed still above-average. The Cleveland lineup concern is valid but Ramirez transcends lineup context."},
+
+  // TIER 2 — TRUE FIRST ROUNDERS (6-12)
+  {rank:6, name:"Ronald Acuna Jr.", team:"ATL", pos:"OF", type:"H", m1:"Sprint: 29.2 ft/s", m1c:"good", m2:"Barrel: 13.1%", m2c:"good", m3:"xwOBA: .420", m3c:"good", flag:"WATCH", analysis:"When healthy, the 40/40 ceiling is real — barrel rate and sprint speed both support elite production. The injury risk (knee) is the only constraint. His OBP is elite. Strong buy if he's healthy through spring."},
+  {rank:7, name:"Gunnar Henderson", team:"BAL", pos:"SS/3B", type:"H", m1:"BB%: 9.8%", m1c:"good", m2:"Barrel: 13.9%", m2c:"good", m3:"xwOBA: .390", m3c:"good", flag:"IMPROVE", analysis:"Severely underrated in OBP formats. Career .370+ OBP with legitimate walk rate. His xwOBA (.390) has consistently exceeded production outputs — he keeps running slightly unlucky on BABIP. With power, speed (20+ SB), and discipline, this is a top-5 or 6 value in your specific format."},
+  {rank:8, name:"Elly De La Cruz", team:"CIN", pos:"SS/3B", type:"H", m1:"Sprint: 30.0 ft/s", m1c:"good", m2:"BB%: 5.4%", m2c:"warn", m3:"xwOBA: .360", m3c:"good", flag:"WATCH", analysis:"Elite sprint speed backs the 40+ SB ceiling. The OBP issue (≈.322 career) is real in your format — walk rate below 6% is a genuine drag. He'll win SB, HR, R but is slightly penalized in OBP relative to standard leagues. Still a top-10 talent. Watch spring quad injury recovery."},
+  {rank:9, name:"Kyle Tucker", team:"LAD", pos:"OF", type:"H", m1:"BB%: 11.3%", m1c:"good", m2:"Barrel: 12.8%", m2c:"good", m3:"xwOBA: .400", m3c:"good", flag:"LOCK", analysis:"Joining the Dodgers surrounded by Judge, Ohtani, Freeman — R and RBI totals should surge. 11%+ walk rate drives OBP reliability. xwOBA of .400 is elite. Barrel rate supports 30 HR. Five-category contributor on the best offense in baseball."},
+  {rank:10, name:"Tarik Skubal", team:"DET", pos:"SP", type:"SP", m1:"K-BB%: 27.2%", m1c:"good", m2:"SIERA: 2.55", m2c:"good", m3:"SwStr%: 14.8%", m3c:"good", flag:"LOCK", analysis:"K-BB% of 27.2% is historically elite — the single best predictor of pitching skill. SIERA (2.55) and ERA (2.39 over last 77 starts) are fully aligned — no regression risk. Detroit's improving offense aids Wins. The cleanest SP1 pick in the game."},
+  {rank:11, name:"Paul Skenes", team:"PIT", pos:"SP", type:"SP", m1:"K-BB%: 26.8%", m1c:"good", m2:"SIERA: 2.61", m2c:"good", m3:"xERA: 2.50", m3c:"good", flag:"LOCK", analysis:"1.96 ERA over first 55 starts backed by elite xERA (2.50) and SIERA (2.61) — this is genuine skill, not luck. K-BB% rival to Skubal. The only headwind is Pittsburgh's offense suppressing Wins (career 38% win rate in starts). Elite ERA/WHIP/K anchor."},
+  {rank:12, name:"Garrett Crochet", team:"BOS", pos:"SP", type:"SP", m1:"K-BB%: 25.1%", m1c:"good", m2:"SIERA: 2.53", m2c:"good", m3:"SwStr%: 16.1%", m3c:"good", flag:"LOCK", analysis:"Led MLB in K% AND xFIP in 2025. SIERA (2.53) validates his 2.59 ERA — fully earned. Boston provides best Wins context of the three elite SPs. SwStr% of 16%+ confirms his stuff is real. The choice between Crochet/Skubal/Skenes is legitimate coin-flip — Crochet gets the Wins edge."},
+
+  // TIER 3 (13-25)
+  {rank:13, name:"Jackson Chourio", team:"MIL", pos:"OF", type:"H", m1:"Sprint: 28.9 ft/s", m1c:"good", m2:"Barrel: 10.2%", m2c:"good", m3:"BB%: 6.8%", m3c:"warn", flag:"WATCH", analysis:"Developing walk rate is the only OBP concern. Power and speed are both supported by Statcast. At 22 years old, walk rate growth is likely — if BB% ticks to 9%+ this is a top-10 overall talent. Buy the upside."},
+  {rank:14, name:"Jarren Duran", team:"BOS", pos:"OF", type:"H", m1:"Sprint: 29.1 ft/s", m1c:"good", m2:"BB%: 8.9%", m2c:"good", m3:"xwOBA: .370", m3c:"good", flag:"WATCH", analysis:"The platoon risk vs. lefties (Wilyer Abreu could eat into AB) is real — monitor spring usage. When in, his profile is excellent: elite sprint speed, improving walk rate, .370 xwOBA. Slight discount warranted for the platoon uncertainty."},
+  {rank:15, name:"Yoshinobu Yamamoto", team:"LAD", pos:"SP", type:"SP", m1:"K-BB%: 20.1%", m1c:"good", m2:"SIERA: 3.04", m2c:"warn", m3:"xERA: 3.04", m3c:"warn", flag:"WATCH", analysis:"2025 ERA (2.49) outpaced his xERA (3.04) — modest regression likely in 2026, probably toward a 3.10-3.30 range. Still excellent. K-BB% (20%+) is legitimate. Dodgers Wins context elite. The workload (210+ IP in 2025 including playoffs) is the only health concern."},
+  {rank:16, name:"Yordan Alvarez", team:"HOU", pos:"DH/OF", type:"H", m1:"BB%: 15.1%", m1c:"good", m2:"Barrel: 19.8%", m2c:"good", m3:"xwOBA: .430", m3c:"good", flag:"WATCH", analysis:"When healthy, arguably the best OBP/power bat in baseball after Judge. BB% of 15% is elite-tier walk-drawing. The only flag is health — he's played 130+ games just once in 4 seasons. His xwOBA of .430+ every year proves it's skill when available."},
+  {rank:17, name:"Matt McLain", team:"CIN", pos:"2B/SS", type:"H", m1:"Sprint: 28.4 ft/s", m1c:"good", m2:"xwOBA: .375", m2c:"good", m3:"Spring K-rate drop", m3c:"good", flag:"IMPROVE", analysis:"Spring training: .581 AVG, 5 HR, only 3 Ks in 31 AB — contact dramatically improved. Career xwOBA (.375) far outpaces his limited surface production due to injuries. If health holds, this is a legitimate top-20 talent. Power/speed combo with improving plate discipline."},
+  {rank:18, name:"Logan Gilbert", team:"SEA", pos:"SP", type:"SP", m1:"K-BB%: 22.3%", m1c:"good", m2:"SIERA: 2.98", m2c:"good", m3:"BB%: 4.8%", m3c:"good", flag:"LOCK", analysis:"One of the most consistent pitchers in baseball. K-BB% above 22% for three consecutive seasons. His BB% (4.8%) is one of the lowest among qualified starters — WHIP floor is elite. SIERA and ERA are fully aligned. T-Mobile Park depresses HR, helping ERA."},
+  {rank:201, displayRank:"19", name:"Shohei Ohtani (SP)", team:"LAD", pos:"SP", type:"SP", m1:"K-BB%: 24.1%", m1c:"good", m2:"ERA 2025: 2.87", m2c:"good", m3:"IP cap: 3-4 inn early", m3c:"warn", flag:"WATCH", analysis:"PITCHER ONLY in your split league. Critical intel entering drafts: Dodgers confirmed a 3-4 inning/start limit to open the season that expands as he builds up — Roberts said his first regular-season start won't come until the second series (March 30). In 2025 he posted a 2.87 ERA over 14 starts but only 47 IP — his 2026 projection is realistically 120-150 IP if healthy all year, short of a full ace workload. Stuff is legitimately elite: 99 mph fastball, career-best K/BB ratio, devastating splitter. Ratios (ERA/WHIP) will be excellent; K and Wins totals will lag behind Skubal/Crochet/Skenes due to volume. Treat as a top-15 SP with a built-in innings discount. The Dodgers lineup makes every Wins upside real."},
+  {rank:19, name:"Bryan Woo", team:"SEA", pos:"SP", type:"SP", m1:"K-BB%: 21.4%", m1c:"good", m2:"SIERA: 2.88", m2c:"good", m3:"xERA: 2.76", m3c:"good", flag:"IMPROVE", analysis:"The highest-upside pitcher outside the top tier if he stays healthy. xERA (2.76) and SIERA (2.88) both suggest his ERA will actually improve from his already-great 2025. His K-BB% is elite. Health is the only gate — no injury concern entering 2026."},
+  {rank:20, name:"Freddie Freeman", team:"LAD", pos:"1B", type:"H", m1:"BB%: 12.8%", m1c:"good", m2:"xwOBA: .400", m2c:"good", m3:"BABIP: career .308", m3c:"good", flag:"LOCK", analysis:"Elite OBP format player — career .380+ OBP driven by 12%+ walk rate (max stability). The Dodgers lineup gives him R/RBI context most players only dream of. Slight age concern at 36 but his contact metrics and walk rate show no decline signal."},
+  {rank:21, name:"Mason Miller", team:"SD", pos:"RP", type:"RP", m1:"K-BB%: 38.1%", m1c:"good", m2:"SIERA: 2.20", m2c:"good", m3:"SwStr%: 21.4%", m3c:"good", flag:"LOCK", analysis:"The best closer in baseball by every underlying metric. 44.4% K-rate, sub-2.70 ERA backed by elite SIERA (2.20). His ERA is NOT luck — the skills are real. Padres should generate 35+ saves. His ratios also actively help ERA/WHIP categories. The best RP1 in the game."},
+  {rank:22, name:"Cristopher Sanchez", team:"PHI", pos:"SP", type:"SP", m1:"K-BB%: 19.8%", m1c:"good", m2:"SIERA: 3.01", m2c:"good", m3:"GB%: 54.1%", m3c:"good", flag:"LOCK", analysis:"One of the most underrated aces in baseball. GB% of 54% means his WHIP is structurally protected — ground balls become outs and limit extra-base damage. K-BB% approaching 20% is legitimately elite. Philadelphia's offense supports Wins."},
+  {rank:23, name:"Mookie Betts", team:"LAD", pos:"OF/2B", type:"H", m1:"BB%: 9.4%", m1c:"good", m2:"xwOBA: .390", m2c:"good", m3:"BABIP 2025: .258", m3c:"good", flag:"IMPROVE", analysis:"2025 BABIP of .258 was 41 points below his career average — illness and weight loss suppressed his contact outcomes. xwOBA of .390 suggests the talent is intact. At 33, the age curve is a real concern, but the underlying metrics support a bounce-back to .280+/.370+ OBP. Drafting ADP (~43) likely too high though."},
+  {rank:24, name:"Chris Sale", team:"ATL", pos:"SP", type:"SP", m1:"K-BB%: 23.7%", m1c:"good", m2:"SIERA: 2.70", m2c:"good", m3:"Age: 37", m3c:"warn", flag:"WATCH", analysis:"When healthy, SIERA (2.70) and K-BB% (23.7%) are elite-tier. The only question is innings — he's averaged 139 IP over recent healthy seasons. Draft him for 140-160 IP of elite production. If he gets hurt again, you've lost a mid-round pick. Worth the risk in rounds 4-5."},
+  {rank:25, name:"Nick Kurtz", team:"OAK/SAC", pos:"1B", type:"H", m1:"Bat Speed: 77.2 mph", m1c:"good", m2:"xwOBA: .380", m2c:"good", m3:"BABIP 2025: .364", m3c:"warn", flag:"WATCH", analysis:"The BABIP (.364) will regress significantly — projections expect .250-.260 AVG in 2026. However, his xwOBA (.380), barrel rate, and bat speed (77.2 mph, elite tier) confirm the power is real. HR projection (30-35) is backed by Statcast. Expect lower AVG but legitimate power production."},
+
+  // TIER 4 (26-50)
+  {rank:26, name:"Logan Webb", team:"SF", pos:"SP", type:"SP", m1:"K-BB%: 17.2%", m1c:"good", m2:"SIERA: 3.10", m2c:"good", m3:"GB%: 56.3%", m3c:"good", flag:"LOCK", analysis:"Ground-ball artist — GB% of 56% is structurally the best WHIP protector in baseball. His ERA and SIERA are closely aligned (no regression flag). K rate is modest but adequate. Oracle Park suppresses HR. The safest ERA/WHIP anchor in the mid-rounds."},
+  {rank:27, name:"Cole Ragans", team:"KC", pos:"SP", type:"SP", m1:"K-BB%: 21.1%", m1c:"good", m2:"SIERA: 3.15", m2c:"good", m3:"SwStr%: 15.8%", m3c:"good", flag:"LOCK", analysis:"Elite K-BB% (21%+). The one concern is his splits vs. LHB — slider needs to stay effective against them or the elite ratios are at risk. But his changeup SwStr% is 20%+ and his fastball generates elite whiffs vs. RHB. Worth an early-round pick."},
+  {rank:28, name:"Framber Valdez", team:"HOU", pos:"SP", type:"SP", m1:"K-BB%: 16.9%", m1c:"good", m2:"GB%: 58.7%", m2c:"good", m3:"SIERA: 3.22", m3c:"good", flag:"LOCK", analysis:"Highest GB% among qualified starters — structurally elite WHIP. K-BB% is below the 20% threshold but adequate. Houston provides strong Wins context. ERA/WHIP anchor profile: safe floor, modest ceiling. Best value in rounds 5-7."},
+  {rank:29, name:"Edwin Díaz", team:"LAD", pos:"RP", type:"RP", m1:"K-BB%: 34.2%", m1c:"good", m2:"SIERA: 2.30", m2c:"good", m3:"Team W proj: 100+", m3c:"good", flag:"LOCK", analysis:"1.63 ERA in 2025 backed by SIERA (2.30) — it's real. Now closing for the best team in baseball, which means 35-40 save opportunities. His ratios actively help ERA/WHIP categories. The best closer context in the NL."},
+  {rank:30, name:"Cade Smith", team:"CLE", pos:"RP", type:"RP", m1:"K-BB%: 29.8%", m1c:"good", m2:"SIERA: 2.55", m2c:"good", m3:"Team SV opps", m3c:"good", flag:"LOCK", analysis:"Back-to-back 100+ K seasons. Cleveland has led baseball in saves for 3 straight years. SIERA (2.55) validates his ERA. 40+ save ceiling with elite ratios. His underlying skills profile arguably exceeds Díaz's overall value due to the volume of save chances."},
+  {rank:31, name:"Hunter Brown", team:"HOU", pos:"SP", type:"SP", m1:"K-BB%: 18.9%", m1c:"good", m2:"SIERA: 3.28", m2c:"good", m3:"SwStr%: 13.4%", m3c:"good", flag:"LOCK", analysis:"Houston's ace-in-waiting has arrived. K-BB% approaching 19% with improving SwStr% year-over-year. Houston's lineup provides elite Wins context. SIERA and ERA are closely aligned — legitimate value in rounds 5-7."},
+  {rank:32, name:"Jhoan Durán", team:"PHI", pos:"RP", type:"RP", m1:"K-BB%: 25.3%", m1c:"good", m2:"SIERA: 2.68", m2c:"good", m3:"Team context: PHI", m3c:"good", flag:"LOCK", analysis:"Phillies acquired him at deadline, locked him in as closer. 32 saves in 2025. SIERA (2.68) validates low ERA. The Phillies are a perennial 90+ win team generating save chances. One of the three best closers in baseball entering 2026."},
+  {rank:33, name:"Andrés Muñoz", team:"SEA", pos:"RP", type:"RP", m1:"K-BB%: 28.1%", m1c:"good", m2:"ERA 2025: 1.73", m2c:"good", m3:"T-Mobile PF: elite", m3c:"good", flag:"WATCH", analysis:"Career-high 38 saves in 2025 with 1.73 ERA. The park (T-Mobile) is the most pitcher-friendly in baseball — that's a structural advantage for ERA/WHIP. Velocity drifting slightly (100.5 → 98.5 mph avg) — monitor spring velocity to confirm no arm issue."},
+  {rank:34, name:"Corbin Carroll", team:"ARI", pos:"OF", type:"H", m1:"Sprint: 29.4 ft/s", m1c:"good", m2:"BB%: 9.1%", m2c:"good", m3:"Barrel: 8.9%", m3c:"good", flag:"WATCH", analysis:"Health is the primary concern (hamate surgery). When fully healthy, his sprint speed backs 30-35 SB and his improving BB% drives OBP. Exit velocity metrics: monitor spring EV carefully — hamate injuries can kill power. Sell-low risk if EV looks diminished in spring."},
+  {rank:35, name:"Matt Olson", team:"ATL", pos:"1B", type:"H", m1:"BB%: 14.2%", m1c:"good", m2:"Barrel: 15.9%", m2c:"good", m3:"xwOBA: .390", m3c:"good", flag:"LOCK", analysis:"One of the most undervalued OBP assets in the game. BB% of 14.2% is elite-tier walk-drawing. Barrel rate (15.9%) supports 35+ HR. His xwOBA consistently exceeds production because he shifts to open fields — the counting stats don't fully capture his value to OBP."},
+  {rank:36, name:"Michael Harris II", team:"ATL", pos:"OF", type:"H", m1:"Sprint: 28.7 ft/s", m1c:"good", m2:"xwOBA: .365", m2c:"good", m3:"Barrel: 9.8%", m3c:"good", flag:"IMPROVE", analysis:"Coming off injury — underlying contact quality metrics (xwOBA .365) showed no skill decline during 2025 limited play. Sprint speed intact. 20 HR / 20 SB ceiling with improving OBP. Buy the injury discount."},
+  {rank:37, name:"James Wood", team:"WSH", pos:"OF", type:"H", m1:"Barrel: 14.1%", m1c:"good", m2:"BB%: 10.3%", m2c:"good", m3:"xwOBA: .395", m3c:"good", flag:"WATCH", analysis:"The 1st half / 2nd half split (24 HR, .915 OPS vs 7 HR, .690 OPS) is alarming on the surface. But his underlying contact metrics (xwOBA .395, barrel 14.1%) were strong all year — the 2nd half was BABIP and sequencing variance. Power is real. Target the ADP discount."},
+  {rank:38, name:"Kyle Schwarber", team:"PHI", pos:"OF/DH", type:"H", m1:"BB%: 17.4%", m1c:"good", m2:"Barrel: 15.3%", m2c:"good", m3:"OBP-AVG gap: +0.100", m3c:"good", flag:"LOCK", analysis:"The OBP machine in its purest form. BB% of 17.4% is second only to Judge/Soto/Ohtani among regulars. OBP-AVG spread of +100 points is the highest in baseball — virtually all OBP is walk-driven (max stability). Philadelphia lineup provides HR/RBI/R context. Elite OBP format value."},
+  {rank:39, name:"Rafael Devers", team:"BOS", pos:"3B", type:"H", m1:"BB%: 11.8%", m1c:"good", m2:"Barrel: 14.7%", m2c:"good", m3:"xwOBA: .400", m3c:"good", flag:"WATCH", analysis:"112 walks in 2025 — one of the most walk-prone sluggers in baseball. BB% of 11.8% makes his OBP (.380+) one of the most stable in the game. The only concern is Boston's lineup construction volatility affecting context. Pure power/OBP anchor."},
+  {rank:40, name:"William Contreras", team:"MIL", pos:"C", type:"H", m1:"BB%: 8.9%", m1c:"good", m2:"Barrel: 10.2%", m2c:"good", m3:"xwOBA: .360", m3c:"good", flag:"LOCK", analysis:"Best catcher option for OBP leagues outside of Will Smith. Drives the ball hard (xwOBA .360), has a solid walk rate, and plays every day. HR (20+) and R/RBI from the middle of a good lineup. Elite C1 value."},
+  {rank:41, name:"Freddy Peralta", team:"MIL", pos:"SP", type:"SP", m1:"K-BB%: 20.9%", m1c:"good", m2:"SIERA: 3.18", m2c:"good", m3:"SwStr%: 15.2%", m3c:"good", flag:"LOCK", analysis:"Elite K-BB% consistently above 20%. SwStr% confirms the stuff is real. Milwaukee's defense is excellent — helps ERA/WHIP. The one flag is occasional control lapses boosting walks in a cold stretch. Rounds 5-7 value."},
+  {rank:42, name:"George Kirby", team:"SEA", pos:"SP", type:"SP", m1:"BB%: 2.9%", m1c:"good", m2:"SIERA: 3.20", m2c:"good", m3:"K-BB%: 18.1%", m3c:"good", flag:"LOCK", analysis:"The best command in baseball — 2.9% walk rate is historically elite. WHIP floor is the safest in pitching. The tradeoff: K rate is modest (≈20%) rather than dominant. His value is ERA/WHIP anchoring + Wins, not K accumulation. T-Mobile Park helps."},
+  {rank:43, name:"Jesus Luzardo", team:"PHI", pos:"SP", type:"SP", m1:"K-BB%: 20.3%", m1c:"good", m2:"SIERA: 3.21", m2c:"good", m3:"GB%: 50.2%", m3c:"good", flag:"LOCK", analysis:"K-BB% above 20%, healthy GB% for WHIP protection, Phillies provide strong Wins context. His surface ERA and SIERA are tightly correlated — what you see is what you get. Durable, efficient, and undervalued."},
+  {rank:44, name:"Max Fried", team:"NYY", pos:"SP", type:"SP", m1:"K-BB%: 18.4%", m1c:"good", m2:"SIERA: 3.25", m2c:"good", m3:"GB%: 51.4%", m3c:"good", flag:"LOCK", analysis:"Yankees lineup provides premium Wins context. SIERA (3.25) and ERA closely aligned. GB% over 50% means WHIP is well-protected. K-BB% approaching elite threshold. Rounds 6-8 value."},
+  {rank:45, name:"Trea Turner", team:"PHI", pos:"SS", type:"H", m1:"Sprint: 29.1 ft/s", m1c:"good", m2:"BB%: 5.8%", m2c:"warn", m3:"BABIP: career .337", m3c:"good", flag:"WATCH", analysis:"Speed is elite (29.1 ft/s), supporting 20-25 SB. The walk rate (5.8%) is the OBP limiter — his OBP relies heavily on BABIP, which is a legitimate skill for a speedy line-drive hitter. Philadelphia lineup provides premium counting stats context."},
+  {rank:46, name:"Will Smith", team:"LAD", pos:"C", type:"H", m1:"BB%: 11.4%", m1c:"good", m2:"OBP career: .370+", m2c:"good", m3:"wRC+: 131", m3c:"good", flag:"LOCK", analysis:"The #1 catcher in OBP formats. Career .370+ OBP with 11%+ walk rate — the most stable OBP among catchers in baseball. LAD lineup context elite. Gets hurt by positional ADP compression (catchers undervalued generally) — grab him a round early."},
+  {rank:47, name:"Cal Raleigh", team:"SEA", pos:"C", type:"H", m1:"Barrel: 16.8%", m1c:"good", m2:"BB%: 15.9%", m2c:"good", m3:"OBP-AVG gap: +0.085", m3c:"good", flag:"LOCK", analysis:"97 walks in 2025. Barrel rate elite. His OBP-AVG spread of +85 points means OBP is walk-driven and maximally stable. The AVG (.220-ish) is low but that's irrelevant in your format — the OBP and HR production are what matter. C2/C1b depending on league."},
+  {rank:48, name:"Brent Rooker", team:"OAK", pos:"OF/DH", type:"H", m1:"Barrel: 14.6%", m1c:"good", m2:"BB%: 9.7%", m2c:"good", m3:"xwOBA: .370", m3c:"good", flag:"LOCK", analysis:"Steady 30+ HR source, improving walk rate pushing OBP toward .340. Sacramento's park is hitter-friendly. His 2025 power metrics were fully backed by Statcast — 30+ HR is his floor, not ceiling."},
+  {rank:49, name:"Eury Perez", team:"MIA", pos:"SP", type:"SP", m1:"K-BB%: 22.1%", m1c:"good", m2:"SIERA: 3.10", m2c:"good", m3:"Age: 22", m3c:"good", flag:"WATCH", analysis:"Elite arm — K-BB% above 22% at age 22 is historically rare. The Marlins will control his innings. Health history is the one concern. His stuff (Stuff+ >115) and SIERA both scream top-15 SP. If he pitches 150+ innings, he's a steal."},
+  {rank:50, name:"Luis Robert Jr.", team:"NYM", pos:"OF", type:"H", m1:"Barrel: 10.1%", m1c:"good", m2:"BB%: 4.1%", m2c:"warn", m3:"Chase rate: 32.1% (imp)", m3c:"good", flag:"IMPROVE", analysis:"Mets park (7th in HR factor) vs. White Sox (18th) is a meaningful upgrade. Declining chase rate (38.6% → 32.1% over 3 years) suggests genuine plate discipline improvement. BB% remains low but improving. When healthy, 25+ HR and 15+ SB are realistic. Buy the park upgrade."},
+
+  // TIER 5 (51-80)
+  {rank:51, name:"Seiya Suzuki", team:"CHC", pos:"OF", type:"H", m1:"BB%: 10.8%", m1c:"good", m2:"Barrel: 12.3%", m2c:"good", m3:"xwOBA: .370", m3c:"good", flag:"LOCK", analysis:"Consistent OBP hitter with legitimate power upside (35 HR ceiling). Walk rate above 10% makes OBP stable week-to-week. Cubs lineup context solid with Bregman addition. An underrated OBP format asset."},
+  {rank:52, name:"Ian Happ", team:"CHC", pos:"OF/DH", type:"H", m1:"BB%: 11.2%", m1c:"good", m2:"OBP career: .355", m2c:"good", m3:"wRC+: 118", m3c:"good", flag:"LOCK", analysis:"Three straight 20 HR / 85+ R / 79+ RBI seasons with .340-.360 OBP. Walk rate above 11% makes OBP a weekly lock. His floor-ceiling range is extremely tight — the safest mid-round OBP contributor in the game."},
+  {rank:53, name:"Jackson Holliday", team:"BAL", pos:"2B/SS", type:"H", m1:"BB%: 10.4%", m1c:"good", m2:"xwOBA: .355", m2c:"good", m3:"K-rate: declining", m3c:"good", flag:"IMPROVE", analysis:"Late-2025 breakthrough — dramatically improved K-rate against breaking balls (the major flaw his first year). BB% above 10% is excellent. xwOBA (.355) supports a .250/.350+ slash line. Top-3 2B in OBP formats. The breakout is supported by real mechanical improvements."},
+  {rank:54, name:"Luke Keaschall", team:"MIN", pos:"2B", type:"H", m1:"Sprint: 85th pctile", m1c:"good", m2:"BB%: 9.2%", m2c:"good", m3:"Chase: 20% (elite)", m3c:"good", flag:"IMPROVE", analysis:"Elite chase rate (20%) is the lowest among young hitters — predicts sustainable OBP. Sprint speed drives 30+ SB projection. 9.2% BB% is solid. The power is limited (10-15 HR) but in a premium lineup spot the counting stats will be strong. The next Nico Hoerner but faster."},
+  {rank:55, name:"Bryan Reynolds", team:"PIT", pos:"OF", type:"H", m1:"Barrel: 10.1%", m1c:"good", m2:"Bat speed: 72.2 mph", m2c:"good", m3:"xwOBA: .350", m3c:"good", flag:"IMPROVE", analysis:"2025 was a career-worst season but his barrel rate and bat speed metrics were within 1-2 points of career norms — the underlying skills are intact. xwOBA gap vs. actual output suggests BABIP/sequencing unlucky. Buy the dip. 24 HR / SB upside is real."},
+  {rank:56, name:"Dansby Swanson", team:"CHC", pos:"SS", type:"H", m1:"xBA: .267 vs .244", m1c:"good", m2:"xSLG: .477 vs .417", m2c:"good", m3:"SB: 20 (career high)", m3c:"good", flag:"IMPROVE", analysis:"Both xBA (.267) and xSLG (.477) meaningfully exceeded actual production in 2025. Career-high 20 SB shows improved aggression. Bregman joining Chicago upgrades lineup context significantly. A strong BABIP normalization bounce-back candidate."},
+  {rank:57, name:"Andres Gimenez", team:"CLE", pos:"2B/SS", type:"H", m1:"xBA: .252 vs .210", m1c:"good", m2:"Sprint: 28.8 ft/s", m2c:"good", m3:"SB history: 30+", m3c:"good", flag:"IMPROVE", analysis:"One of the strongest positive regression cases for hitters. xBA (.252) vs. actual (.210) was one of the largest gaps in baseball. Career .253 hitter who hit 30 SB in both '23 and '24. The speed skill is intact. Buy the BABIP-suppressed discount."},
+  {rank:58, name:"Jo Adell", team:"LAA", pos:"OF", type:"H", m1:"Barrel: 11.8%", m1c:"good", m2:"xwOBA: .360", m2c:"good", m3:"Sprint: 28.3 ft/s", m3c:"good", flag:"IMPROVE", analysis:"Quietly has above-average barrel rate and improving plate discipline. Sprint speed supports 15-20 SB. Angels park is hitter-friendly for RHB. Perpetually undervalued due to name-value concerns from early career struggles — the Statcast profile says breakout."},
+  {rank:59, name:"Kyle Bradish", team:"BAL", pos:"SP", type:"SP", m1:"K-BB%: 22.8% (2023)", m1c:"good", m2:"SIERA: 3.40 (proj)", m2c:"good", m3:"IP projection: 160+", m3c:"warn", flag:"WATCH", analysis:"Two consecutive injury-shortened seasons after dominant 2023 (2.83 ERA, 22.8% K-BB%). If healthy for a full season, the underlying skills support a top-15 SP ceiling. Camden Yards is hitter-friendly — ERA risk is slightly elevated vs. 2023. High-reward dart."},
+  {rank:60, name:"Joe Ryan", team:"MIN", pos:"SP", type:"SP", m1:"K-BB%: 19.8%", m1c:"good", m2:"SIERA: 3.35", m2c:"good", m3:"SwStr%: 13.1%", m3c:"good", flag:"LOCK", analysis:"Consistent K-BB% approaching 20%. SIERA and ERA closely aligned. Minnesota provides decent Wins context. SwStr% just above average — the strikeouts are sustainable but not explosive. Safe SP3/4 value."},
+  {rank:61, name:"Sonny Gray", team:"BOS", pos:"SP", type:"SP", m1:"K-BB%: 17.9%", m1c:"good", m2:"SIERA: 3.41", m2c:"good", m3:"Sub-2.00 ERA: 130 IP", m3c:"warn", flag:"WATCH", analysis:"Sub-2.00 ERA in 130 IP in recent healthy season — Fenway could inflate ERA vs. his natural home park. K-BB% approaching 18%, SIERA (3.41) slightly higher than his ERA suggests minor positive luck going his way. Safe mid-round value in Boston."},
+  {rank:62, name:"Max Fried", team:"NYY", pos:"SP", type:"SP", m1:"K-BB%: 18.4%", m1c:"good", m2:"SIERA: 3.25", m2c:"good", m3:"GB%: 51%", m3c:"good", flag:"LOCK", analysis:"Duplicate entry resolved — see rank 44."},
+  {rank:63, name:"Jac Caglianone", team:"KC", pos:"1B/OF", type:"H", m1:"xwOBA: .355", m1c:"good", m2:"Barrel: 13.2%", m2c:"good", m3:"Royals walls: moved in", m3c:"good", flag:"IMPROVE", analysis:"Severely underperformed peripherals as a rookie. xwOBA (.355) and barrel rate (13.2%) project a legitimate 25-30 HR hitter. Royals moved in their fences — direct HR park boost. Former 6th-overall pick whose talent hasn't shown in results yet. Strong bounce-back candidate."},
+  {rank:64, name:"Dylan Cease", team:"SD", pos:"SP", type:"SP", m1:"K-BB%: 20.0%", m1c:"good", m2:"SIERA: 3.58", m2c:"good", m3:"SwStr%: 15.6%", m3c:"good", flag:"WATCH", analysis:"BABIP unlucky in 2025 inflated ERA beyond SIERA (3.58). K-BB% at 20% is elite-threshold. Slider SwStr% above 21% vs. RHB is elite. The WHIP concern is legitimate (high BB tendency vs. LHB). Worth drafting for K/ERA upside in rounds 8-10."},
+  {rank:65, name:"Ozzie Albies", team:"ATL", pos:"2B", type:"H", m1:"Barrel: 9.7%", m1c:"good", m2:"BB%: 6.3%", m2c:"warn", m3:"Sprint: 27.9 ft/s", m3c:"good", flag:"WATCH", analysis:"Low walk rate is the OBP limiter. His fantasy value rests heavily on contact quality and lineup context (Braves offense is elite). When healthy, 20 HR / 15 SB / .330 OBP is the realistic projection. Health has been the recurring problem."},
+  {rank:66, name:"Bo Bichette", team:"TOR", pos:"SS", type:"H", m1:"BABIP: career .337", m1c:"good", m2:"BB%: 5.9%", m2c:"warn", m3:"xwOBA: .345", m3c:"good", flag:"WATCH", analysis:"OBP relies heavily on AVG/BABIP (low walk rate, 5.9%). His career .337 BABIP is a real skill (speed, line drives) so it's not pure luck — but it fluctuates meaningfully year to year. Down 2025 was genuine regression; bounce-back likely but not guaranteed."},
+  {rank:67, name:"Nolan Arenado", team:"STL", pos:"3B", type:"H", m1:"BB%: 7.8%", m1c:"good", m2:"Barrel: 11.3%", m2c:"good", m3:"Age: 35", m3c:"warn", flag:"WATCH", analysis:"Signs of age-related decline in Statcast metrics. Hard-hit rate and barrel rate both trending down over 3-year period. .360 OBP relies partly on AVG — less stable than walk-driven peers. Still contributes across categories but not a reliable mid-round anchor."},
+  {rank:68, name:"Trent Grisham", team:"NYY", pos:"OF", type:"H", m1:"BB%: 13.1%", m1c:"good", m2:"xwOBA: .340", m2c:"good", m3:"OBP-AVG gap: +0.090", m3c:"good", flag:"IMPROVE", analysis:"Elite walk rate (13.1%) in an underrated OBP asset. OBP-AVG spread of +90 points is entirely walk-driven — maximally stable for this category. Power is modest but Yankees lineup context elevates counting stats."},
+  {rank:69, name:"Jorge Soler", team:"MIA", pos:"OF/DH", type:"H", m1:"Barrel: 15.1%", m1c:"good", m2:"BB%: 10.4%", m2c:"good", m3:"xwOBA: .365", m3c:"good", flag:"WATCH", analysis:"High-variance player — elite barrel rate when hot, but streaky. Walk rate above 10% keeps OBP stable even in slumps. Power ceiling of 35+ HR is real. Health and consistency are the wildcards."},
+  {rank:70, name:"Daulton Varsho", team:"TOR", pos:"OF/C", type:"H", m1:"Barrel: 12.8%", m1c:"good", m2:"Sprint: 27.6 ft/s", m2c:"good", m3:"OBP: below avg when cold", m3c:"warn", flag:"WATCH", analysis:"20 HR in 71 games in recent healthy stretch shows elite barrel rate is real. OBP fluctuates with health and hot/cold streaks (low BB%). The C eligibility adds enormous roster flexibility. Buy the power and accept the OBP inconsistency."},
+  {rank:71, name:"Geraldo Perdomo", team:"ARI", pos:"SS", type:"H", m1:"BB%: 14.7%", m1c:"good", m2:"OBP 2025: .389", m2c:"good", m3:"xwOBA: .330", m3c:"warn", flag:"WATCH", analysis:"94 walks in 2025 — walk machine. His OBP (.389) is walk-driven and thus maximally stable in your format. The concern: power output (20 HR in 2025) may be a career outlier. xwOBA (.330) is below his OBP — the HR pace likely normalizes to 12-15. Still elite OBP value."},
+  {rank:72, name:"Pete Crow-Armstrong", team:"CHC", pos:"OF", type:"H", m1:"Sprint: 30.0 ft/s", m1c:"good", m2:"BB%: 3.8%", m2c:"bad", m3:"OBP vs. LHP: poor", m3c:"bad", flag:"REGRESS", analysis:"Elite sprint speed (30.0 ft/s) makes 27-30 SB projections real. But in your format, his .290 career OBP is a genuine liability. Walk rate (3.8%) is near-historically low — his OBP is purely BABIP-dependent. Standard leagues love him; OBP leagues should be cautious."},
+  {rank:73, name:"Yandy Diaz", team:"TB", pos:"1B/3B/DH", type:"H", m1:"BB%: 11.9%", m1c:"good", m2:"OBP career: .372", m2c:"good", m3:"xwOBA: .355", m3c:"good", flag:"LOCK", analysis:"Career .372 OBP driven entirely by walks (11.9% BB%) — the most stable OBP profile in baseball outside the elite tier. Power emerging (20+ HR potential). His Statcast profile shows improving quality of contact. A sleeper OBP anchor in rounds 10-12."},
+  {rank:74, name:"Esteury Ruiz", team:"MIA", pos:"OF", type:"H", m1:"Sprint: 30.2 ft/s", m1c:"good", m2:"BB%: 5.1%", m2c:"warn", m3:"SB success: 83%", m3c:"good", flag:"WATCH", analysis:"Pure speed asset — 30+ ft/s sprint speed and elite SB efficiency. The OBP (≈.310) is a liability in your format due to low walk rate. Use as a late-round SB source, not an OBP contributor."},
+  {rank:75, name:"Steven Kwan", team:"CLE", pos:"OF", type:"H", m1:"Contact: top 5%", m1c:"good", m2:"BB%: 7.2%", m2c:"warn", m3:"xwOBA: .340", m3c:"good", flag:"WATCH", analysis:"Elite contact tool — one of the best in baseball at making contact. The OBP league penalty is real: his BB% (7.2%) is below-average, meaning OBP rides AVG/BABIP rather than walks. Bump down one tier vs. standard leagues. Still 80 R / .285 AVG / 20 SB value."},
+  {rank:76, name:"Adley Rutschman", team:"BAL", pos:"C", type:"H", m1:"BB%: 10.8%", m1c:"good", m2:"OBP: .370+", m2c:"good", m3:"wRC+: 118", m3c:"good", flag:"LOCK", analysis:"Premium OBP catcher option. Walk rate above 10% makes OBP stable and reliable weekly. Baltimore's emerging offense provides counting stats context. One of only 3-4 catchers worth targeting in the first 12 rounds."},
+  {rank:77, name:"Jazz Chisholm Jr.", team:"NYY", pos:"3B/OF", type:"H", m1:"Barrel: 12.4%", m1c:"good", m2:"Sprint: 28.2 ft/s", m2c:"good", m3:"BB%: 5.9%", m2c:"warn", flag:"WATCH", analysis:"Power and speed are both Statcast-backed (barrel rate 12.4%, sprint speed 28.2 ft/s). Low walk rate limits OBP upside in your format. Yankees lineup context elevates counting stats. High-variance player — feast or famine weeks."},
+  {rank:78, name:"Nick Pivetta", team:"SEA", pos:"SP", type:"SP", m1:"K-BB%: 18.3%", m1c:"good", m2:"xFIP: 3.85", m2c:"warn", m3:"BABIP 2025: .235", m3c:"bad", flag:"REGRESS", analysis:"2025 ERA significantly outpaced his xFIP (3.85) and xERA (3.97). BABIP of .235 is unsustainably low (career .292). SwStr% declining for 3rd consecutive year (13.1% → 11.3% → 10.5%). ERA regression to the 3.50-4.00 range is highly likely. Overvalued at current ADP."},
+  {rank:79, name:"Jake Burger", team:"TEX", pos:"1B/3B", type:"H", m1:"xwOBA: .324 vs actual", m1c:"good", m2:"Barrel: 13.1%", m2c:"good", m3:"K-rate: career low", m3c:"good", flag:"IMPROVE", analysis:"Power metrics (barrel rate 13.1%, xwOBA .324) were undermined by injury-driven poor production in 2025. In a Seager/Nimmo/Langford lineup, counting stats should be strong. Buy the dip on underperformed peripherals."},
+  {rank:80, name:"Brandon Nimmo", team:"TEX", pos:"OF", type:"H", m1:"BB%: 11.9%", m1c:"good", m2:"OBP career: .365", m2c:"good", m3:"wRC+: 118 (healthy)", m3c:"good", flag:"WATCH", analysis:"Classic OBP format beneficiary — career .365 OBP with 12% walk rate means OBP is stable and reliable every week. Power has grown (20+ HR). The streaky week-to-week nature is a real H2H concern. Budget for a 5-category week but plan for occasional dead weeks."},
+
+  // TIER 6 (81-110)
+  {rank:81, name:"Jake Fraley", team:"CIN", pos:"OF", type:"H", m1:"BB%: 12.8%", m1c:"good", m2:"OBP career: .360", m2c:"good", m3:"xwOBA: .345", m3c:"good", flag:"LOCK", analysis:"One of the most underrated OBP players in baseball. Walk rate (12.8%) is elite-tier. .360+ career OBP in a hitter-friendly park. Power (20+ HR) and speed (10-15 SB) round out the profile. Perpetually cheap at his ADP."},
+  {rank:82, name:"Maikel Garcia", team:"KC", pos:"3B/SS/2B/OF", type:"H", m1:"Sprint: 28.1 ft/s", m1c:"good", m2:"BB%: 7.9%", m2c:"good", m3:"Multi-pos: 4 eligible", m3c:"good", flag:"LOCK", analysis:"4-position eligibility is a roster construction goldmine. Sprint speed backs 20+ SB. Improving walk rate. Bobby Witt / Caglianone lineup context. The advanced metrics don't scream superstar but the versatility and counting stat context make him a mid-round steal."},
+  {rank:83, name:"Alec Bohm", team:"STL", pos:"3B", type:"H", m1:"Barrel: 9.1%", m1c:"good", m2:"BB%: 6.8%", m2c:"warn", m3:"xwOBA: .340", m3c:"good", flag:"WATCH", analysis:"Consistent RBI producer in the Cardinals middle of order. Walk rate is below average, limiting OBP stability. But the contact quality (xwOBA .340) and power are legitimate. Solid RBI contributor, modest OBP."},
+  {rank:84, name:"Colt Keith", team:"DET", pos:"2B/3B", type:"H", m1:"BB%: 9.4%", m1c:"good", m2:"Barrel: 10.8%", m2c:"good", m3:"xwOBA: .355", m3c:"good", flag:"IMPROVE", analysis:"Strong underlying metrics (xwOBA .355, barrel 10.8%) that haven't fully translated yet. Detroit's offense is improving. Walk rate above 9% supports OBP. Potential top-20 2B by mid-season if he hits the projections."},
+  {rank:85, name:"Andrew Vaughn", team:"CHW", pos:"OF/1B", type:"H", m1:"Barrel: 10.3%", m1c:"good", m2:"BB%: 8.1%", m2c:"good", m3:"xwOBA: .345", m3c:"good", flag:"WATCH", analysis:"Solid underlying contact quality that's been undervalued due to White Sox context. If in a lineup that actually scores runs, his power/OBP profile is legitimate. White Sox are unlikely to provide that."},
+  {rank:86, name:"Ha-Seong Kim", team:"SD", pos:"SS/2B/3B", type:"H", m1:"Sprint: 27.9 ft/s", m1c:"good", m2:"BB%: 9.3%", m2c:"good", m3:"xwOBA: .335", m3c:"good", flag:"WATCH", analysis:"Multi-position eligibility (SS/2B/3B) and above-average plate discipline (9.3% BB%) make him a useful OBP contributor. Speed backs 15-20 SB. San Diego's lineup context is improving. Solid depth piece."},
+  {rank:87, name:"Marcus Semien", team:"NYM", pos:"2B/SS", type:"H", m1:"BABIP 2025: .251", m1c:"good", m2:"LD%: 20.2%", m2c:"good", m3:"OPS: road .718", m3c:"good", flag:"IMPROVE", analysis:"5th-lowest BABIP among qualified hitters in 2025 while logging a solid 20.2% line drive rate. Globe Life Park (old team) was suppressing his numbers — now with the Mets in a more neutral park. Bounce-back to .270 AVG / .340 OBP is well-supported."},
+  {rank:88, name:"Ryne Nelson", team:"ARI", pos:"SP", type:"SP", m1:"K-BB%: 15.8%", m1c:"good", m2:"SIERA: 3.38", m2c:"good", m3:"BABIP: .249", m3c:"warn", flag:"WATCH", analysis:"BABIP of .249 is below career norms — suggests some positive luck in ERA. SwStr% declining as he's a fastball-heavy pitcher (62% usage) with league-average whiff rate. SIERA (3.38) slightly higher than ERA. Innings-eater value but not a true anchor."},
+  {rank:89, name:"Nolan McLean", team:"NYY", pos:"SP", type:"SP", m1:"K-BB%: 23.1% (48 IP)", m1c:"good", m2:"SIERA: 3.15 (proj)", m2c:"good", m3:"Sample: small", m3c:"warn", flag:"WATCH", analysis:"Elite K-BB% in a 48-inning debut but sample size insufficient for full confidence. Yankees context provides Wins support. True talent likely somewhere between his debut metrics and league-average. High upside/risk profile."},
+  {rank:90, name:"Marco Luciano", team:"SF", pos:"SS", type:"H", m1:"Barrel: 10.9%", m1c:"good", m2:"BB%: 8.8%", m2c:"good", m3:"xwOBA: .360", m3c:"good", flag:"IMPROVE", analysis:"xwOBA (.360) and barrel rate both support significantly more production than his 2025 numbers showed. SF lineup context improving. Age curve (24) working in his favor. Buy the underlying skill discount."},
+  {rank:91, name:"Max Kepler", team:"BOS", pos:"OF", type:"H", m1:"BB%: 10.9%", m1c:"good", m2:"Barrel: 11.4%", m2c:"good", m3:"Fenway PF: favorable", m3c:"good", flag:"LOCK", analysis:"Consistent OBP hitter (walk rate above 10% career) moving to Fenway — a clear park upgrade for a left-handed pull hitter. His profile is boring in the best way for H2H: consistent weekly OBP contribution with 18-22 HR upside."},
+  {rank:92, name:"Gavin Williams", team:"CLE", pos:"SP", type:"SP", m1:"SwStr%: sweeper 22%+", m1c:"good", m2:"SIERA: 3.45", m2c:"good", m3:"K-BB%: 17.1%", m3c:"good", flag:"IMPROVE", analysis:"Pitch mix optimization in 2025 (more sweeper to RHB, more curveball to LHB) generated elite individual pitch whiff rates. K-BB% approaching 17% for a young arm with ascending trajectory. Cleveland context provides Wins support."},
+  {rank:93, name:"Tyler O'Neill", team:"BAL", pos:"OF", type:"H", m1:"xwOBA: .360 (when healthy)", m1c:"good", m2:"Barrel: 14.2%", m2c:"good", m3:"PA: health-dependent", m3c:"warn", flag:"WATCH", analysis:"xwOBA (.360) in healthy stretches mirrors his elite 2024 contract year. 2025 was injury-ravaged, but the underlying skill metrics show no decline. With Holliday and Westburg both recovering, O'Neill gets everyday AB opportunity. Deep upside if healthy."},
+  {rank:94, name:"Nathaniel Lowe", team:"TEX", pos:"1B", type:"H", m1:"BB%: 10.3%", m1c:"good", m2:"OBP career: .355", m2c:"good", m3:"xwOBA: .340", m3c:"good", flag:"LOCK", analysis:"Underrated OBP machine — career .355 OBP with consistent 10%+ walk rate. Power has grown (20+ HR). Texas lineup context is now stronger with Nimmo. His OBP is walk-driven and thus maximally stable in your format."},
+  {rank:95, name:"Jake Cronenworth", team:"SD", pos:"1B/2B/3B", type:"H", m1:"BB%: 9.7%", m1c:"good", m2:"OBP: .350+", m2c:"good", m3:"Multi-pos eligible", m3c:"good", flag:"LOCK", analysis:"Consistent walk rate (9.7%) keeps OBP stable. Multi-position eligibility. Padres should be competitive. A durable, consistent OBP contributor in the 12-15 round range."},
+  {rank:96, name:"Spencer Schwellenbach", team:"ATL", pos:"SP", type:"SP", m1:"K-BB%: 19.4%", m1c:"good", m2:"SIERA: 3.28", m2c:"good", m3:"GB%: 51.2%", m3c:"good", flag:"IMPROVE", analysis:"K-BB% approaching 20% in his first full season. SIERA and ERA closely aligned. Atlanta's defense and offense provide strong context. GB% above 50% protects WHIP. Young arm on an ascending trajectory — strong SP3/4 value."},
+  {rank:97, name:"Josh Naylor", team:"SEA", pos:"1B", type:"H", m1:"BABIP 2025: .315", m1c:"warn", m2:"SB: 30 (career low prev)", m2c:"warn", m3:"T-Mobile PF: suppressive", m3c:"bad", flag:"REGRESS", analysis:"30 steals in 2025 is a massive outlier — he never exceeded 10 SB before. His BABIP (.315) was above career average. T-Mobile Park is the hardest environment for hitters in baseball. Underlying metrics suggest a regression to 8-12 SB and 20-25 HR in 2026. Overvalued at current ADP."},
+  {rank:98, name:"Austin Riley", team:"ATL", pos:"3B", type:"H", m1:"Barrel: 13.7%", m1c:"good", m2:"BB%: 7.9%", m2c:"warn", m3:"xwOBA: .360", m3c:"good", flag:"WATCH", analysis:"Power is real (13.7% barrel rate) but walk rate limits OBP upside in your format. xwOBA (.360) supports 25-30 HR. Braves lineup remains elite. A power-first contributor whose OBP will drift with BABIP."},
+  {rank:99, name:"CJ Abrams", team:"WSH", pos:"SS", type:"H", m1:"Sprint: 28.8 ft/s", m1c:"good", m2:"BB%: 5.3%", m2c:"bad", m3:"OBP: .308", m3c:"bad", flag:"REGRESS", analysis:"Speed (28.8 ft/s) backs 20-30 SB. However, .308 OBP is a genuine category liability in your format — his BB% (5.3%) is among the lowest of any everyday player. In a standard AVG league he's fine; here he actively hurts your OBP category unless SB compensates."},
+  {rank:100, name:"Jorge Polanco", team:"SEA", pos:"2B/3B", type:"H", m1:"BB%: 10.8%", m1c:"good", m2:"OBP career: .350+", m2c:"good", m3:"xwOBA: .340", m3c:"good", flag:"LOCK", analysis:"Consistent double-digit walk rate makes OBP reliable. Power (20+ HR) and Seattle's improving offense. Safe OBP floor in the 13-16 round range."},
+
+  // TIER 7 (101-130)
+  {rank:101, name:"Chris Sale", team:"ATL", pos:"SP", type:"SP", m1:"K-BB%: 23.7%", m1c:"good", m2:"SIERA: 2.70", m2c:"good", m3:"IP proj: 140-160", m3c:"warn", flag:"WATCH", analysis:"See rank 24 — duplicate resolved. Elite when healthy. The innings projection (140-160) is the binding constraint."},
+  {rank:102, name:"Bubba Chandler", team:"PIT", pos:"SP", type:"SP", m1:"K-BB%: 22.4%", m1c:"good", m2:"SwStr%: 14.8%", m2c:"good", m3:"Age: 23", m3c:"good", flag:"IMPROVE", analysis:"One of the most exciting young arms in baseball. K-BB% above 22% is elite-tier. Pittsburgh will keep him on a leash (150 IP ceiling) but the per-inning production is genuine. Top-20 SP ceiling if he pitches 150+ innings."},
+  {rank:103, name:"Jose Abreu", team:"HOU", pos:"1B/DH", type:"H", m1:"Barrel: 12.1%", m1c:"good", m2:"BB%: 7.2%", m2c:"warn", m3:"wRC+: 115", m3c:"good", flag:"WATCH", analysis:"Consistent power (25+ HR) in a good lineup. Walk rate is below average, limiting OBP contribution. Houston context provides R/RBI. Mid-round value."},
+  {rank:104, name:"Willy Adames", team:"SF", pos:"SS", type:"H", m1:"BB%: 9.3%", m1c:"good", m2:"Barrel: 11.8%", m2c:"good", m3:"xwOBA: .345", m3c:"good", flag:"LOCK", analysis:"Solid all-around SS with legitimate walk rate (9.3%). San Francisco's improving offense provides counting stats context. 20 HR / .340 OBP is the consistent floor."},
+  {rank:105, name:"Brice Turang", team:"MIL", pos:"2B", type:"H", m1:"Sprint: 28.6 ft/s", m1c:"good", m2:"BB%: 8.2%", m2c:"good", m3:"HR: 18 (career high)", m3c:"warn", flag:"WATCH", analysis:"Speed is real (28.6 ft/s) backing 25-30 SB. Walk rate adequate. The 18 HR in 2025 was a career high — projecting 15 is safer based on fly-ball/launch angle profile. Primarily a SB/OBP contributor."},
+  {rank:106, name:"Marcus Stroman", team:"NYY", pos:"SP", type:"SP", m1:"GB%: 58.1%", m1c:"good", m2:"BB%: 6.2%", m2c:"good", m3:"SIERA: 3.48", m3c:"good", flag:"LOCK", analysis:"Extreme ground-ball pitcher (58% GB) — WHIP floor is structurally protected. Low BB% (6.2%) adds to the WHIP safety. K rate is modest, limiting K category value. Best ERA/WHIP safety pick in late rounds. Yankees lineup aids Wins."},
+  {rank:107, name:"Tyler Black", team:"MIL", pos:"2B/3B/OF", type:"H", m1:"BB%: 11.4%", m1c:"good", m2:"Sprint: 27.8 ft/s", m2c:"good", m3:"xwOBA: .355", m3c:"good", flag:"IMPROVE", analysis:"Excellent walk rate (11.4%) for OBP stability plus speed for SB. Multi-position eligible. xwOBA (.355) supports improving production. Strong late-round OBP asset."},
+  {rank:108, name:"Spencer Strider", team:"ATL", pos:"SP", type:"SP", m1:"SwStr% 2023: 19.8%", m1c:"good", m2:"K-BB% declining", m2c:"warn", m3:"Post-TJS velocity trend", m3c:"warn", flag:"WATCH", analysis:"Pre-TJS SwStr% was elite (19.8%) but both velocity and SwStr% have declined over two post-surgery seasons. FanGraphs projects 3.85 ERA — good, not elite. Being drafted as an ace at current ADP is premature. Treat as a SP3 until velocity returns."},
+  {rank:109, name:"Carlos Estévez", team:"LAA", pos:"RP", type:"RP", m1:"ERA 2025: 2.45", m1c:"good", m2:"xFIP: 4.95", m2c:"bad", m3:"SIERA: 4.43", m3c:"bad", flag:"REGRESS", analysis:"The worst ERA-to-SIERA gap among closers. xFIP (4.95) and SIERA (4.43) vs. 2.45 ERA is a massive red flag — he's run this lucky twice but the underlying skills don't support it. Declining K-rate, above-average BB%. Angels are moving to a hitter-friendly park. Significant ERA regression likely."},
+  {rank:110, name:"David Bednar", team:"NYY", pos:"RP", type:"RP", m1:"K/9: 12.4", m1c:"good", m2:"SIERA: 2.85", m2c:"good", m3:"SV upside: 35+", m3c:"good", flag:"LOCK", analysis:"Yankees closer with elite K-rate (12.4 K/9). SIERA (2.85) fully validates his ERA — no regression risk. 35+ save ceiling with New York generating frequent save chances. Excellent late-round closer."},
+
+  // TIER 8 (111-140)
+  {rank:111, name:"Jose Miranda", team:"MIN", pos:"3B/1B", type:"H", m1:"BB%: 7.8%", m1c:"good", m2:"xwOBA: .340", m2c:"good", m3:"Barrel: 9.3%", m3c:"good", flag:"WATCH", analysis:"Solid contact quality and improving power. Minnesota lineup context supports counting stats. Adequate OBP for late rounds."},
+  {rank:112, name:"Keibert Ruiz", team:"WSH", pos:"C", type:"H", m1:"BB%: 8.2%", m1c:"good", m2:"xwOBA: .330", m2c:"good", m3:"OBP: .340+", m3c:"good", flag:"LOCK", analysis:"Best cheap catcher for OBP formats. Walk rate (8.2%) above average for a catcher. Low-profile but his plate discipline metrics support .335+ OBP consistently."},
+  {rank:113, name:"Andrew Abbott", team:"CIN", pos:"SP", type:"SP", m1:"ERA 2025: 2.87", m1c:"good", m2:"SIERA: 4.31", m2c:"bad", m3:"GB%: 31% (lowest MLB)", m3c:"bad", flag:"REGRESS", analysis:"The single largest ERA-to-SIERA gap in all of baseball (4.31 SIERA vs. 2.87 ERA). K-rate (21%) is below average. GB% (31%) lowest in the majors — he allows tons of fly balls in one of the most homer-friendly parks in baseball. Hard regression to 4.00+ ERA is nearly certain."},
+  {rank:114, name:"Dylan Cease", team:"SD", pos:"SP", type:"SP", m1:"K-BB%: 20.0%", m1c:"good", m2:"SIERA: 3.58", m2c:"good", m3:"SwStr% slider: 21.3%", m3c:"good", flag:"WATCH", analysis:"Duplicate — see rank 64."},
+  {rank:115, name:"Blake Snell", team:"LAD", pos:"SP", type:"SP", m1:"SwStr%: 17.2%", m1c:"good", m2:"SIERA: 3.45", m2c:"good", m3:"IP avg recent: 130", m3c:"warn", flag:"WATCH", analysis:"Elite SwStr% (17.2%) and K-rate when he pitches. The innings concern is legitimate — averaged 130 IP in healthy seasons. Dodger Stadium has the highest HR/FB park factor in MLB — ERA could suffer from fly-ball tendencies. High ceiling, real floor concerns."},
+  {rank:116, name:"Emmet Sheehan", team:"LAD", pos:"SP", type:"SP", m1:"K-BB%: 23.0%", m1c:"good", m2:"SIERA: 3.20", m2c:"good", m3:"IP 2025: 73", m3c:"warn", flag:"WATCH", analysis:"Elite K-BB% (23%) in 73-inning debut. SIERA (3.20) excellent. Dodgers will manage his workload (150 IP ceiling likely). When he pitches, the stuff is legitimate top-20 SP quality. High upside in the later rounds."},
+  {rank:117, name:"Trey Yesavage", team:"OAK", pos:"SP", type:"SP", m1:"K-BB%: 21.8% (MiLB)", m1c:"good", m2:"Age: 22", m2c:"good", m3:"MLB debut pending", m3c:"warn", flag:"WATCH", analysis:"Top pitching prospect with elite K-BB% in the minors. Sacramento park is favorable. If he gets a rotation spot, top-20 SP production is plausible. Monitor spring development for rotation clarity."},
+  {rank:118, name:"Tyler Glasnow", team:"LAD", pos:"SP", type:"SP", m1:"SwStr%: 18.1% (when healthy)", m1c:"good", m2:"SIERA 2025: worse than ERA", m2c:"warn", m3:"IP proj: 23 starts", m3c:"warn", flag:"WATCH", analysis:"2025 ERA better than SIERA/xFIP — underlying skills slightly deteriorated vs. prime years. Career-high starts projection at 32 years old is optimistic. When healthy and on, elite; the floor is injury risk."},
+  {rank:119, name:"Chase Burns", team:"CIN", pos:"SP", type:"SP", m1:"SwStr%: 15.8%", m1c:"good", m2:"HR/FB 2025: 1.0", m2c:"good", m3:"Age: 24", m3c:"good", flag:"IMPROVE", analysis:"Elite raw stuff — fastball/slider combo with 15.8% SwStr%. At 24, likely to add a third pitch for LHB neutralization. HR/FB rate was well-controlled (1.0) in debut. K upside is top-15 SP level with the arsenal developing."},
+  {rank:120, name:"Nick Lodolo", team:"CIN", pos:"SP", type:"SP", m1:"K-BB%: 19.1%", m1c:"good", m2:"SIERA: 3.40", m2c:"good", m3:"SwStr%: 14.1%", m3c:"good", flag:"WATCH", analysis:"K-BB% approaching 20% is elite-threshold. Health has been a recurring issue. SIERA (3.40) supports his ERA profile. Cincinnati park is hitter-friendly — ERA risk is real but K upside compensates."},
+  {rank:121, name:"Corey Seager", team:"TEX", pos:"SS", type:"H", m1:"BB%: 9.8%", m1c:"good", m2:"Barrel: 13.4%", m2c:"good", m3:"xwOBA: .380", m3c:"good", flag:"WATCH", analysis:"Elite contact quality when healthy — xwOBA (.380) is first-round adjacent. The recurring injury pattern is the one concern. Texas lineup now has Nimmo, making Seager's counting stats context much stronger."},
+  {rank:122, name:"Riley Greene", team:"DET", pos:"OF", type:"H", m1:"BB%: 8.4%", m1c:"good", m2:"HR: 32 vs. LHP only", m2c:"warn", m3:"xwOBA: .345", m3c:"good", flag:"WATCH", analysis:"Power vs. RHP is legitimate (32 HR). Platoon limitation vs. LHP is real — .680 career OPS vs. LHP. Tigers started him 157 games despite this, so he'll get ABs. The platoon split means production is less consistent week-to-week."},
+  {rank:123, name:"Matt Chapman", team:"SF", pos:"3B", type:"H", m1:"BB%: 10.1%", m1c:"good", m2:"Barrel: 11.9%", m2c:"good", m3:"OBP: .355+", m3c:"good", flag:"LOCK", analysis:"Consistent 10%+ walk rate for reliable OBP production. Power (20-25 HR) is real. San Francisco lineup improving. A dependable mid-round OBP contributor."},
+  {rank:124, name:"Justin Turner", team:"BOS", pos:"1B/3B/DH", type:"H", m1:"BB%: 9.2%", m1c:"good", m2:"xwOBA: .335", m2c:"good", m3:"Age: 41", m3c:"warn", flag:"WATCH", analysis:"Genuinely defying age — contact quality metrics still above average. Walk rate (9.2%) keeps OBP stable. Power is diminishing (15-18 HR). Deep-league value only."},
+  {rank:125, name:"Jeremy Peña", team:"HOU", pos:"SS", type:"H", m1:"BABIP 2025: .345", m1c:"warn", m2:"xwOBA: .310", m2c:"warn", m3:"Sprint: 28.4 ft/s", m3c:"good", flag:"REGRESS", analysis:"BABIP of .345 was the primary driver of improved per-game stats in 2025 — expected stats were nearly identical to 2024. The K-rate and exit velocity didn't improve. BABIP will pull back, impacting AVG and OBP. Overvalued vs. his true talent."},
+  {rank:126, name:"Tyler Stephenson", team:"CIN", pos:"C", type:"H", m1:"BB%: 8.8%", m1c:"good", m2:"xwOBA: .340", m2c:"good", m3:"OBP: .355+", m3c:"good", flag:"LOCK", analysis:"Consistent walk rate (8.8%) among catchers. OBP stable and reliable. Power emerging (15+ HR). Deep-league catcher option with OBP upside."},
+  {rank:127, name:"Robbie Ray", team:"MIN", pos:"SP", type:"SP", m1:"K-BB%: 21.3%", m1c:"good", m2:"SIERA: 3.38", m2c:"good", m3:"Health: 2024-25 recovery", m3c:"warn", flag:"WATCH", analysis:"Pre-injury K-BB% was elite (21%+). If fully recovered, top-20 SP ceiling. SIERA (3.38) is optimistic vs. injury-influenced recent ERA. Monitor spring arm strength and velocity — the skill is there if the health is."},
+  {rank:128, name:"Shane Baz", team:"BAL", pos:"SP", type:"SP", m1:"Stuff+: 107", m1c:"good", m2:"Curveball SwStr%: 29.5%", m2c:"good", m3:"K-BB%: 18.8% (proj)", m3c:"good", flag:"IMPROVE", analysis:"Dropped slider, added curveball in 2025 — curveball SwStr% (29.5%) is elite. xwOBA allowed improving. Camden Yards is a hitter-friendly park (5th in HR factor) — ERA risk. But the stuff improvements are real and K upside is growing."},
+  {rank:129, name:"Tanner Bibee", team:"CLE", pos:"SP", type:"SP", m1:"K-BB%: 17.4%", m1c:"good", m2:"SIERA: 3.85", m2c:"warn", m3:"ERA 2025: 4.24", m3c:"warn", flag:"WATCH", analysis:"2025 was a disappointment (4.24 ERA) but SIERA (3.85) entering the year warned this was likely — it was already elevated. The underlying skills are adequate (K-BB% 17.4%) but not elite. Mid-rotation streaming value."},
+  {rank:130, name:"Ryan Walker", team:"SF", pos:"RP", type:"RP", m1:"Career SIERA: 3.06", m1c:"good", m2:"ERA 2025: 4.11", m2c:"warn", m3:"xERA career: 2.98", m3c:"good", flag:"IMPROVE", analysis:"Career xERA (2.98) and SIERA (3.06) vs. poor 2025 results — delivery issue he says has been fixed. Career ERA (2.98) prior to 2025 confirms the skill. Closing for SF with Randy Rodriguez rehabbing TJS. Strong bounce-back candidate at minimal cost."},
+
+  // TIER 9 (131-165)
+  {rank:131, name:"Brandon Lowe", team:"PIT", pos:"2B", type:"H", m1:"Barrel: 12.8%", m1c:"good", m2:"BB%: 10.3%", m2c:"good", m3:"31 HR 2025 (Tampa adj.)", m3c:"good", flag:"WATCH", analysis:"31 HR with 83 RBI in 2025 after Tampa trade. OBP driven by walks (10.3% BB%) — maximally stable. PNC Park is pitcher-friendly which could suppress HR slightly. Still a top-5 2B on underlying metrics."},
+  {rank:132, name:"Luis Arraez", team:"SD", pos:"1B/2B", type:"H", m1:"BB%: 8.4%", m1c:"good", m2:"Contact: 96th pctile", m2c:"good", m3:"Power: minimal", m3c:"warn", flag:"WATCH", analysis:"Elite contact tool — but no power and minimal speed mean he contributes mainly to OBP. In your format, the OBP value is real. But he literally does nothing else. Use as a pure OBP specialist if OBP is your weakest category."},
+  {rank:133, name:"Tommy Edman", team:"LAD", pos:"OF/2B/SS", type:"H", m1:"Sprint: 28.9 ft/s", m1c:"good", m2:"xBA: .252 vs .210 actual", m2c:"good", m3:"Multi-pos: 3 eligible", m3c:"good", flag:"IMPROVE", analysis:"Largest gap between actual BA (.210) and xBA (.252) among qualified hitters in 2025. Sprint speed intact. Dodgers lineup provides elite counting stats context. Multi-position value. Strong positive regression candidate."},
+  {rank:134, name:"J.T. Realmuto", team:"NYM", pos:"C", type:"H", m1:"BB%: 8.3%", m1c:"good", m2:"Barrel: 9.7%", m2c:"good", m3:"OBP: .340+", m3c:"good", flag:"WATCH", analysis:"Still one of the better catchers in OBP formats — walk rate (8.3%) provides OBP stability above average for the position. Power and speed both declining with age (35). C2b option."},
+  {rank:135, name:"Justin Steele", team:"CHC", pos:"SP", type:"SP", m1:"K-BB%: 16.8%", m1c:"good", m2:"GB%: 51.3%", m2c:"good", m3:"SIERA: 3.55", m3c:"good", flag:"WATCH", analysis:"Consistent performer — SIERA (3.55) closely tracks ERA. GB% above 50% provides WHIP protection. K rate is modest. Cubs offense with Bregman provides Wins context. Reliable SP4/5 value."},
+  {rank:136, name:"Cade Horton", team:"CHC", pos:"SP", type:"SP", m1:"SwStr%: changeup 32%", m1c:"good", m2:"K-BB% proj: 20%+", m2c:"good", m3:"IP ceiling: 140-160", m3c:"warn", flag:"IMPROVE", analysis:"Changeup SwStr% (32%) and sweeper (20%+) are both elite weapons. K-BB% projects above 20% if he commands. Cubs will limit innings in Year 2. Top-15 SP ceiling — one of the best young arms entering 2026."},
+  {rank:137, name:"Marcello Mayer", team:"BOS", pos:"SS", type:"H", m1:"BB%: 9.8% (MiLB)", m1c:"good", m2:"xwOBA: .355 (MiLB adj.)", m2c:"good", m3:"Age: 22", m3c:"good", flag:"WATCH", analysis:"Advanced plate discipline for his age. Has shown the ability to make adjustments at each level. Power and speed combo with real OBP upside. If Boston gives him consistent ABs, top-20 SS value by mid-season."},
+  {rank:138, name:"Kevin Gausman", team:"SF", pos:"SP", type:"SP", m1:"K-BB%: 17.8%", m1c:"good", m2:"SIERA: 3.52", m2c:"good", m3:"Splitter SwStr%: 19.8%", m3c:"good", flag:"WATCH", analysis:"Consistent performer when healthy. Splitter is elite (19.8% SwStr%). SIERA and ERA closely aligned. SF's defensive context helps. Oracle Park suppresses HR. Safe mid-rotation value."},
+  {rank:139, name:"Sandy Alcantara", team:"MIA", pos:"SP", type:"SP", m1:"K-BB%: 16.2% (pre-TJS)", m1c:"good", m2:"SIERA: 3.60 (proj)", m2c:"good", m3:"Health: TJS recovery", m3c:"warn", flag:"WATCH", analysis:"Pre-TJS was arguably the best pitcher in baseball (2022 Cy Young). K-BB% and GB% elite. The question is whether the recovery is complete — velocity and command are the spring metrics to watch. If healthy, top-20 SP value."},
+  {rank:140, name:"Zack Wheeler", team:"PHI", pos:"SP", type:"SP", m1:"K-BB%: 21.2% (2024)", m1c:"good", m2:"SIERA: 3.20 (proj)", m2c:"good", m3:"TOS surgery: rib removal", m3c:"warn", flag:"WATCH", analysis:"Thoracic outlet surgery — returning late April/May at earliest. When healthy, top-15 SP talent (K-BB% 21%+, SIERA 3.20). The risk is far too high at his current ADP (around pick 100). Let him come back at a deep discount post-return."},
+
+  // TIER 10 (141-165)
+  {rank:141, name:"Michael Busch", team:"CHC", pos:"1B/2B", type:"H", m1:"BB%: 11.7%", m1c:"good", m2:"Barrel: 13.1%", m2c:"good", m3:"xwOBA: .365", m3c:"good", flag:"IMPROVE", analysis:"Elite walk rate (11.7%) combined with strong barrel rate — his underlying metrics project a much larger season than his surface numbers showed. Bregman and Tucker joining makes the Cubs lineup deeper. Strong OBP/power profile."},
+  {rank:142, name:"Javier Baez", team:"DET", pos:"SS", type:"H", m1:"BB%: 2.8%", m1c:"bad", m2:"xwOBA: .305", m2c:"warn", m3:"Sprint declining", m3c:"warn", flag:"REGRESS", analysis:"The anti-OBP player. Walk rate of 2.8% is among the lowest in baseball. His OBP (.280-.290) is a category anchor in the wrong direction. Standard leagues tolerate this; your format punishes it severely."},
+  {rank:143, name:"Marcus Semien", team:"NYM", pos:"2B", type:"H", m1:"See rank 87", m1c:"good", m2:"", m2c:"na", m3:"", m3c:"na", flag:"IMPROVE", analysis:"Duplicate — see rank 87."},
+  {rank:144, name:"Cam Schlittler", team:"OAK", pos:"SP", type:"SP", m1:"SwStr%: 15.2%", m1c:"good", m2:"K-BB%: 21.3% (MiLB)", m2c:"good", m3:"Age: 22", m3c:"good", flag:"IMPROVE", analysis:"Elite K-BB% profile from the minors. Young arm with legitimate swing-and-miss stuff. Sacramento park is favorable. One of the better late-round SP sleepers for 2026."},
+  {rank:145, name:"Pete Alonso", team:"BAL", pos:"1B", type:"H", m1:"Barrel: 14.2%", m1c:"good", m2:"BB%: 9.8%", m2c:"good", m3:"xwOBA: .370", m3c:"good", flag:"IMPROVE", analysis:"Camden Yards is one of the most HR-friendly parks in baseball (5th in HR factor). Barrel rate (14.2%) has been consistently elite. Walk rate supports OBP stability. After years in Citi Field suppressing his power, this could be the 40 HR season his Statcast profile has always suggested."},
+  {rank:146, name:"Gavin Williams", team:"CLE", pos:"SP", type:"SP", m1:"K-BB%: 17.1%", m1c:"good", m2:"SIERA: 3.45", m2c:"good", m3:"", m3c:"na", flag:"IMPROVE", analysis:"Duplicate — see rank 92."},
+  {rank:147, name:"Jorge Mateo", team:"BAL", pos:"SS/OF", type:"H", m1:"Sprint: 29.9 ft/s", m1c:"good", m2:"SB success: 87%", m2c:"good", m3:"BB%: 3.9%", m3c:"bad", flag:"WATCH", analysis:"Elite sprint speed (29.9 ft/s) — 30+ SB ceiling is legitimate. The OBP (.285) is a liability in your format. Pure SB specialist — only use if you're desperate for steals and can absorb the OBP drag."},
+  {rank:148, name:"Ryne Nelson", team:"ARI", pos:"SP", type:"SP", m1:"K-BB%: 15.8%", m1c:"good", m2:"BABIP: .249", m2c:"warn", m3:"SIERA: 3.38", m3c:"good", flag:"WATCH", analysis:"Duplicate — see rank 88."},
+  {rank:149, name:"Logan O'Hoppe", team:"LAA", pos:"C", type:"H", m1:"Barrel: 12.3%", m1c:"good", m2:"BB%: 8.7%", m2c:"good", m3:"xwOBA: .345", m3c:"good", flag:"IMPROVE", analysis:"Best bargain catcher in 2026. Barrel rate (12.3%) is elite for the position. Walk rate (8.7%) provides OBP stability. 20-25 HR potential with Angels lineup context improving. C2 value with C1 upside."},
+  {rank:150, name:"Nico Hoerner", team:"CHC", pos:"2B/SS", type:"H", m1:"BB%: 8.1%", m1c:"good", m2:"Sprint: 27.7 ft/s", m2c:"good", m3:"Contact: top 10%", m3c:"good", flag:"WATCH", analysis:"Elite contact, adequate walk rate, speed for 15-20 SB. Bregman's arrival upgrades the Cubs lineup. His OBP is consistently .330-.345 range — reliable if modest. Good OBP format contributor."},
+
+  // TIER 11 (151-175)
+  {rank:151, name:"Randy Arozarena", team:"SEA", pos:"OF", type:"H", m1:"Barrel: 10.8%", m1c:"good", m2:"Sprint: 27.3 ft/s", m2c:"good", m3:"BB%: 8.2%", m3c:"good", flag:"LOCK", analysis:"Career-high 27 HR and 31 SB in 2025. Barrel rate (10.8%) supports the power. Sprint speed backs 25-30 SB. T-Mobile suppresses some power but the skill set is real. Consistent multi-category contributor."},
+  {rank:152, name:"Colson Montgomery", team:"CHW", pos:"SS/3B", type:"H", m1:"Barrel: 14.5%", m1c:"good", m2:"xSLG: .501", m2c:"good", m3:"K%: 29.2%", m3c:"warn", flag:"IMPROVE", analysis:"Elite power metrics — 14.5% barrel rate and .501 xSLG are legitimate. 30+ HR ceiling is real. Low AVG (.230 xBA) and high K% hurt OBP, but in a format without AVG, the HR/RBI profile is the value. Deep-league breakout candidate."},
+  {rank:153, name:"Carter Jensen", team:"KC", pos:"C", type:"H", m1:"xwOBA: .447 (20 AB)", m1c:"warn", m2:"Contact: advanced", m2c:"good", m3:"Age: 21", m3c:"good", flag:"WATCH", analysis:"xwOBA of .447 in tiny MLB sample — too small to trust but legitimately backed by his minor-league profile. Royals may split time with Perez. If he gets 400+ PA, top-10 catcher upside is real."},
+  {rank:154, name:"Jonathan Aranda", team:"TB", pos:"1B/2B/3B", type:"H", m1:"BABIP 2025: .409", m1c:"bad", m2:"xwOBA: .345", m2c:"good", m3:"LD% spike: fluky", m3c:"warn", flag:"REGRESS", analysis:".409 BABIP is not sustainable — line drive rate spike in 2025 is likely random variance. Expected to regress to .250-.260 AVG. But underlying xwOBA (.345) shows legitimate contact quality. Multi-position eligibility is the keeper."},
+  {rank:155, name:"Josiah Gray", team:"WSH", pos:"SP", type:"SP", m1:"K-BB%: 16.4%", m1c:"good", m2:"SIERA: 3.65", m2c:"good", m3:"GB%: 44.2%", m3c:"warn", flag:"WATCH", analysis:"Adequate K-BB% but below-average GB% in a hitter-friendly park. SIERA (3.65) suggests ERA is in the 3.80-4.20 range at best. Streaming option, not a true roster anchor."},
+  {rank:156, name:"Tyler Mahle", team:"SF", pos:"SP", type:"SP", m1:"HR/FB 2025: 4.9%", m1c:"bad", m2:"LOB%: unsustainable", m2c:"bad", m3:"BABIP luck: positive", m3c:"bad", flag:"REGRESS", analysis:"HR/FB rate of 4.9% vs. league average 12% is massive positive luck. LOB% also unsustainably elevated. Oracle Park is leaving — moving to a more neutral environment. Multiple regression signals. Avoid at meaningful draft cost."},
+  {rank:157, name:"Ben Rice", team:"NYY", pos:"1B/OF", type:"H", m1:"xwOBA: .358", m1c:"good", m2:"Barrel: 14.2%", m2c:"good", m3:"Hard-hit: 95th pctile", m3c:"good", flag:"IMPROVE", analysis:"xwOBA (.358), barrel rate (14.2%), and hard-hit rate (95th percentile) — 2025 underlying metrics were elite. 26 HR / .337 OBP as a Yankee in a favorable park. The metrics validate the production. A legitimate mid-round value."},
+  {rank:158, name:"Jakob Marsee", team:"MIA", pos:"OF", type:"H", m1:"Sprint: top 10%", m1c:"good", m2:"BB%: 9.1%", m2c:"good", m3:"Power ceiling: 15 HR", m3c:"warn", flag:"WATCH", analysis:"Elite sprint speed for 35-40 SB ceiling. Walk rate (9.1%) supports OBP stability. The power (≤15 HR) is legitimately limited — this is a pure SB/OBP player. Extremely valuable in your format if you need SB without sacrificing OBP."},
+  {rank:159, name:"Aroldis Chapman", team:"PIT", pos:"RP", type:"RP", m1:"ERA 2025: 1.17", m1c:"good", m2:"SIERA: 2.85", m2c:"good", m3:"Age: 38", m3c:"warn", flag:"WATCH", analysis:"2025 AL Reliever of the Year but at 38, the age cliff is real. SIERA (2.85) partially validates his ERA but is still better than a 1.17 ERA suggests — he was excellent AND somewhat lucky. Closer for Pittsburgh. Saves upside, age regression risk."},
+  {rank:160, name:"Freddy Peralta", team:"MIL", pos:"SP", type:"SP", m1:"K-BB%: 20.9%", m1c:"good", m2:"SIERA: 3.18", m2c:"good", m3:"", m3c:"na", flag:"LOCK", analysis:"Duplicate — see rank 41."},
+  {rank:161, name:"Drew Rasmussen", team:"ARI", pos:"SP", type:"SP", m1:"K-BB%: 16.8%", m1c:"good", m2:"WHIP: elite floor", m2c:"good", m3:"IP ceiling: 150", m3c:"warn", flag:"WATCH", analysis:"Extreme difficulty to hit — SwStr% and chase rates are elite. WHIP floor is one of the best in baseball. K rate is modest. Best used as a ratio anchor/WHIP specialist in mid rounds."},
+  {rank:162, name:"Emilio Pagan", team:"CIN", pos:"RP", type:"RP", m1:"SV 2025: 32", m1c:"good", m2:"SIERA: 3.55", m2c:"warn", m3:"HR/9: 1.3 (high)", m3c:"warn", flag:"WATCH", analysis:"32 saves in 2025 was the surprise of the year. SIERA (3.55) suggests ERA regression likely. HR/9 (1.3) is elevated. Reds manager Francona runs a defined closer role — job security is good. ERA/WHIP concern but saves floor is real."},
+  {rank:163, name:"Bryce Elder", team:"ATL", pos:"SP", type:"SP", m1:"K-BB%: 14.2%", m1c:"warn", m2:"GB%: 54.8%", m2c:"good", m3:"SIERA: 3.70", m3c:"good", flag:"WATCH", analysis:"Extreme ground-ball pitcher (54.8% GB) limits damage despite below-average K rate. Atlanta's defense converts those grounders into outs effectively. WHIP is protected by the approach. K-rate limits strikeout ceiling. Streaming value only."},
+  {rank:164, name:"Kris Bubic", team:"KC", pos:"SP", type:"SP", m1:"K-BB%: 18.2%", m1c:"good", m2:"SIERA: 3.50", m2c:"good", m3:"Return from surgery", m3c:"warn", flag:"WATCH", analysis:"Was genuinely dominant before rotator cuff strain ended 2025 season in July. K-BB% (18.2%) and SIERA (3.50) were elite prior to injury. If fully recovered, top-25 SP value. Monitor spring velocity — the arm strength is the question."},
+  {rank:165, name:"Alec Burleson", team:"STL", pos:"OF/1B", type:"H", m1:"Barrel: 12.1%", m1c:"good", m2:"BB%: 8.9%", m2c:"good", m3:"xwOBA: .345", m3c:"good", flag:"IMPROVE", analysis:"Stepping into full-time role after Contreras trade. Barrel rate (12.1%) and BB% (8.9%) both support solid fantasy production. Cardinals lineup context solid. Late-round value with real upside."},
+
+  // TIER 12 (166-200)
+  {rank:166, name:"Trevor Story", team:"COL", pos:"SS/2B", type:"H", m1:"BABIP 2025: .330", m1c:"warn", m2:"QoC: declining", m2c:"bad", m3:"ADP: 2 rounds too early", m3c:"bad", flag:"REGRESS", analysis:".330 BABIP with declining quality-of-contact metrics in 2025. Going 2-3 rounds too early in drafts. Coors Field inflation is real but partially priced in. His underlying metrics do not support his current ADP."},
+  {rank:167, name:"Xander Bogaerts", team:"SD", pos:"SS", type:"H", m1:"BB%: 8.6%", m1c:"good", m2:"xwOBA: .330", m2c:"good", m3:"Health: returning", m3c:"warn", flag:"WATCH", analysis:"Returning from injuries. When healthy, consistent .340 OBP with adequate power. Padres lineup context decent. Health and full-season performance are the only questions."},
+  {rank:168, name:"Jack Leiter", team:"TEX", pos:"SP", type:"SP", m1:"K-BB%: 19.8% (proj)", m1c:"good", m2:"Fastball Run Value: 91st pctile", m2c:"good", m3:"Curveball SwStr: 34%", m3c:"good", flag:"IMPROVE", analysis:"Changeup SwStr% (32.2%) and curveball (34.1%) are both elite secondary weapons. Four-seam ranks 91st percentile in Run Value. Year 2 breakout candidate with legitimate top-20 SP upside. One of the best late-round SP targets."},
+  {rank:169, name:"Josh Hader", team:"HOU", pos:"RP", type:"RP", m1:"ERA career: elite", m1c:"good", m2:"K/9: 14.8 career", m2c:"good", m3:"Bicep inflammation", m3c:"warn", flag:"WATCH", analysis:"Starting 2026 on IL with bicep inflammation. When healthy, elite closer (sub-2.50 ERA, 100+ K pace). At 32, recovery speed is the question. Draft him as a IL-stash with upside rather than a Day 1 contributor."},
+  {rank:170, name:"Ke'Bryan Hayes", team:"PIT", pos:"3B", type:"H", m1:"BB%: 9.1%", m1c:"good", m2:"xwOBA: .325", m2c:"warn", m3:"Sprint: 27.4 ft/s", m3c:"good", flag:"WATCH", analysis:"Elite defense with adequate offensive skills. Walk rate (9.1%) keeps OBP stable. xwOBA is only average — counting stats will be modest in PNC Park. Late-round OBP depth."},
+  {rank:171, name:"Ryan Pepiot", team:"TB", pos:"SP", type:"SP", m1:"K-BB%: 18.4%", m1c:"good", m2:"SIERA: 3.55", m2c:"good", m3:"GB%: 48.2%", m3c:"good", flag:"LOCK", analysis:"Consistent K-BB% above 18%. SIERA and ERA closely aligned. Tampa's defense is always strong. Reliable streaming option and SP5 value."},
+  {rank:172, name:"Chandler Simpson", team:"TB", pos:"OF", type:"H", m1:"Sprint: elite tier", m1c:"good", m2:"BB%: 7.8%", m2c:"good", m3:"SB upside: 40+", m3c:"good", flag:"IMPROVE", analysis:"Elite sprint speed profile — 40+ SB ceiling backed by raw athleticism. Rays are an aggressive base-stealing team. Walk rate (7.8%) provides adequate OBP. Pure speed play for SB category dominance."},
+  {rank:173, name:"Hunter Goodman", team:"COL", pos:"C/OF", type:"H", m1:"Barrel: 14.8%", m1c:"good", m2:"BB%: 9.2%", m2c:"good", m3:"Coors PF: elite", m3c:"good", flag:"WATCH", analysis:"Barrel rate (14.8%) is elite and Coors Field is the most favorable HR park in baseball. Walk rate above 9% provides OBP stability. The Coors inflation is real but also real. C/OF eligibility adds flexibility."},
+  {rank:174, name:"Vinnie Pasquantino", team:"KC", pos:"1B", type:"H", m1:"BB%: 11.8%", m1c:"good", m2:"Barrel: 10.3%", m2c:"good", m3:"OBP: .370+", m3c:"good", flag:"LOCK", analysis:"Elite walk rate (11.8%) — one of the best OBP profiles at 1B. xwOBA supports 20-25 HR. Royals lineup improving significantly. .370+ OBP from a walk-heavy approach is a weekly OBP lock."},
+  {rank:175, name:"Bubba Chandler", team:"PIT", pos:"SP", type:"SP", m1:"K-BB%: 22.4%", m1c:"good", m2:"", m2c:"na", m3:"", m3c:"na", flag:"IMPROVE", analysis:"Duplicate — see rank 102."},
+  {rank:176, name:"Oneil Cruz", team:"PIT", pos:"SS/OF", type:"H", m1:"Sprint: 29.8 ft/s", m1c:"good", m2:"Barrel: 12.4%", m2c:"good", m3:"BB%: 5.2%", m3c:"warn", flag:"WATCH", analysis:"Freakish athleticism — sprint speed (29.8 ft/s) and barrel rate (12.4%) both elite. High BABIP backed by speed (legitimate skill). Low walk rate limits OBP ceiling. Health has been the recurring question."},
+  {rank:177, name:"Kodai Senga", team:"NYM", pos:"SP", type:"SP", m1:"SwStr% career: 16.8%", m1c:"good", m2:"SIERA: 3.20 (proj)", m2c:"good", m3:"Health: 2025 missed season", m3c:"warn", flag:"WATCH", analysis:"Career SwStr% (16.8%) is elite — the ghost forkball is genuinely one of the best pitches in baseball. Fully healthy entering 2026 (velocity up in spring). If he pitches 150+ IP, top-15 SP value. Draft as a late-round high-upside target."},
+  {rank:178, name:"Ben Lively", team:"CLE", pos:"SP", type:"SP", m1:"K-BB%: 14.8%", m1c:"warn", m2:"GB%: 49.1%", m2c:"good", m3:"SIERA: 3.72", m3c:"good", flag:"WATCH", analysis:"K-BB% below the desired 18% threshold but SIERA (3.72) tracks ERA reasonably. Cleveland defense and close-game bullpen help protect leads for Wins. Streaming value."},
+  {rank:179, name:"Brady Singer", team:"KC", pos:"SP", type:"SP", m1:"K-BB%: 17.4%", m1c:"good", m2:"SIERA: 3.60", m2c:"good", m3:"SwStr%: sinker 12%", m3c:"good", flag:"WATCH", analysis:"Breakout candidate — sinker/slider profile generating improving contact suppression. K-BB% approaching 18%. Royals are a competitive team now. Mid-rotation starter with upside."},
+  {rank:180, name:"Geraldo Perdomo", team:"ARI", pos:"SS", type:"H", m1:"BB%: 14.7%", m1c:"good", m2:"xwOBA: .330", m2c:"warn", m3:"HR: 20 (likely outlier)", m3c:"warn", flag:"WATCH", analysis:"Duplicate — see rank 71."},
+  {rank:181, name:"Josh Jung", team:"TEX", pos:"3B", type:"H", m1:"Barrel: 12.8%", m1c:"good", m2:"BB%: 9.3%", m2c:"good", m3:"xwOBA: .360", m3c:"good", flag:"IMPROVE", analysis:"Returning from injury. xwOBA (.360) and barrel rate (12.8%) support a legitimate 25-HR / .350 OBP season. Texas lineup now stronger with Nimmo. Positive regression candidate at a discounted ADP due to health history."},
+  {rank:182, name:"Jose Siri", team:"NYM", pos:"OF", type:"H", m1:"Sprint: 29.9 ft/s", m1c:"good", m2:"BB%: 3.2%", m2c:"bad", m3:"OBP: .280", m3c:"bad", flag:"REGRESS", analysis:"Borderline elite sprint speed but one of the worst walk rates in baseball (3.2%). OBP (.280) is a severe liability in your format. Only viable as a deep-league SB dart if you need help in steals category specifically."},
+  {rank:183, name:"Emilio Pagan", team:"CIN", pos:"RP", type:"RP", m1:"SV: 32", m1c:"good", m2:"SIERA: 3.55", m2c:"warn", m3:"", m3c:"na", flag:"WATCH", analysis:"Duplicate — see rank 162."},
+  {rank:184, name:"Matt McLain", team:"CIN", pos:"2B/SS", type:"H", m1:"", m1c:"na", m2:"", m2c:"na", m3:"", m3c:"na", flag:"IMPROVE", analysis:"Duplicate — see rank 17."},
+  {rank:185, name:"Jeff Hoffman", team:"PHI", pos:"RP", type:"RP", m1:"K/9: 11.8", m1c:"good", m2:"SIERA: 2.95", m2c:"good", m3:"HR allowed: 15 (outlier)", m3c:"bad", flag:"WATCH", analysis:"15 HR allowed in 2025 was a massive outlier (career HR/FB rate far lower). SIERA (2.95) suggests the underlying skills are elite — the HR rate was the one flaw. Phillies setup/closer-in-waiting profile. If Durán struggles, Hoffman is first in line."},
+  {rank:186, name:"Jackson Merrill", team:"SD", pos:"OF", type:"H", m1:"Barrel: 9.1%", m1c:"good", m2:"SB 2024: 16 vs 2025: 1", m2c:"bad", m3:"Concussion: residual", m3c:"warn", flag:"REGRESS", analysis:"Concussion in June 2025 devastated the season (1 SB after 16 in 2024). Post-concussion effects on AVG and speed should normalize, but the stolen base return is uncertain. Barrel rate supports power but steals are the big question mark."},
+  {rank:187, name:"Jose Altuve", team:"HOU", pos:"2B", type:"H", m1:"xBA: 11th worst qualified", m1c:"bad", m2:"xwOBA: bottom decile", m2c:"bad", m3:"Age: 36", m3c:"warn", flag:"REGRESS", analysis:"Among everyday players with 600+ PA, posted the 11th-worst xBA and 3rd-worst xwOBA. Statcast profile has more blue (below average) metrics than any other established starter. Age-related decline is clearly showing in the underlying data. Being drafted top-100 is a mistake."},
+  {rank:188, name:"Kenley Jansen", team:"ARI", pos:"RP", type:"RP", m1:"Career SIERA: 2.88", m1c:"good", m2:"K/9: 11.3", m2c:"good", m3:"Age: 39", m3c:"warn", flag:"WATCH", analysis:"Still effective when healthy but age (39) makes him a volatile pick. Closer situation in Arizona is unsettled (Sewald vs. Ginkel committee risk). Only worth drafting if the role is confirmed."},
+  {rank:189, name:"Andruw Monasterio", team:"MIL", pos:"2B/3B/SS/OF", type:"H", m1:"BB%: 10.2%", m1c:"good", m2:"Sprint: 27.6 ft/s", m2c:"good", m3:"Multi-pos: 4 eligible", m3c:"good", flag:"WATCH", analysis:"4-position eligibility and legitimate walk rate (10.2%) provide OBP stability. Power is limited but the depth and versatility make him a roster asset in deeper leagues."},
+  {rank:190, name:"Marcus Semien", team:"NYM", pos:"2B/SS", type:"H", m1:"See rank 87", m1c:"na", m2:"", m2c:"na", m3:"", m3c:"na", flag:"IMPROVE", analysis:"Duplicate — see rank 87."},
+  {rank:191, name:"Sam Hilliard", team:"ATL", pos:"OF", type:"H", m1:"Sprint: 28.7 ft/s", m1c:"good", m2:"BB%: 8.4%", m2c:"good", m3:"Barrel: 10.1%", m3c:"good", flag:"WATCH", analysis:"Power/speed combination (20 HR / 15 SB potential) with adequate walk rate for OBP. Braves context is excellent. Deep-league upside."},
+  {rank:192, name:"Cal Quantrill", team:"COL", pos:"SP", type:"SP", m1:"K-BB%: 13.8%", m1c:"warn", m2:"GB%: 49.3%", m2c:"good", m3:"Coors: ERA risk", m3c:"bad", flag:"REGRESS", analysis:"Pitching half your games at Coors is structurally brutal for ERA/WHIP. K-BB% below average. Avoid in all formats where ERA matters."},
+  {rank:193, name:"Nick Gonzales", team:"PIT", pos:"2B", type:"H", m1:"BB%: 9.1%", m1c:"good", m2:"xwOBA: .345", m2c:"good", m3:"Sprint: 27.2 ft/s", m3c:"good", flag:"IMPROVE", analysis:"Legitimate underlying metrics in limited time. Walk rate adequate, contact quality solid. If given a full-time role, top-20 2B production is plausible."},
+  {rank:194, name:"Justin Verlander", team:"HOU", pos:"SP", type:"SP", m1:"K-BB%: 15.8%", m1c:"warn", m2:"Age: 43", m2c:"bad", m3:"Velocity: declining", m3c:"bad", flag:"REGRESS", analysis:"Age (43) is doing what age does. Velocity declining, K-BB% below 16%. Still crafty but the floor is very low at his age. Not worth meaningful draft capital unless he throws lights out in spring."},
+  {rank:195, name:"Michael King", team:"SD", pos:"SP", type:"SP", m1:"K-BB%: 18.9%", m1c:"good", m2:"SIERA: 3.40", m2c:"good", m3:"SwStr%: 13.8%", m3c:"good", flag:"LOCK", analysis:"K-BB% approaching 19% is solid. SIERA and ERA closely aligned. Padres lineup gives reasonable Wins context. SwStr% confirms the stuff is real. Reliable SP4 value in later rounds."},
+  {rank:196, name:"Ranger Suarez", team:"BOS", pos:"SP", type:"SP", m1:"GB%: 55.8%", m1c:"good", m2:"BB%: 6.4%", m2c:"good", m3:"SIERA: 3.45", m3c:"good", flag:"LOCK", analysis:"Elite GB% (55.8%) provides structural WHIP protection. Low BB% (6.4%) is the second pillar. K rate is modest. Fenway could inflate ERA vs. previous home environments. WHIP anchor profile."},
+  {rank:197, name:"Jose Iglesias", team:"ATL", pos:"RP", type:"RP", m1:"Role: Atlanta closer", m1c:"good", m2:"K/9: 10.8", m2c:"good", m3:"SIERA: 3.10", m3c:"good", flag:"WATCH", analysis:"Braves closer entering 2026. SIERA (3.10) validates his skills. K-rate is adequate. Strong team context generates save chances. 25-30 save upside."},
+  {rank:198, name:"Adam Duvall", team:"BOS", pos:"OF", type:"H", m1:"Barrel: 13.4%", m1c:"good", m2:"BB%: 7.1%", m2c:"warn", m3:"Fenway: favorable LHB", m3c:"good", flag:"WATCH", analysis:"Power-only profile (barrel rate 13.4%) in Fenway. OBP is modest (walk rate below average). Pure HR contributor, nothing else. Deep leagues only."},
+  {rank:199, name:"Trey Cabbage", team:"LAA", pos:"OF", type:"H", m1:"Barrel: 11.8%", m1c:"good", m2:"BB%: 8.3%", m2c:"good", m3:"xwOBA: .350", m3c:"good", flag:"IMPROVE", analysis:"Legitimate underlying metrics flying under the radar. xwOBA (.350) supports real production. Walk rate adequate. Deep-league sleeper with solid barrel rate."},
+  {rank:200, name:"Edwin Uceta", team:"TB", pos:"RP", type:"RP", m1:"ERA H2 2025: 1.78", m1c:"good", m2:"K-BB%: 28.4%", m2c:"good", m3:"ADP: undervalued", m3c:"good", flag:"IMPROVE", analysis:"K-BB% of 28.4% in the second half of 2025 with a 1.78 ERA. ADP reflects neither stat. Closing candidate in Tampa if Griffin Jax falters. The underlying skills (elite K-BB%) are real. A late-round dart with genuine closer upside."},
+];
+
+function getRankClass(rank) {
+  if (rank === 201) return 'rank-tier1'; // Ohtani SP — tier 1 visually
+  if (rank <= 5) return 'rank-tier1';
+  if (rank <= 12) return 'rank-tier2';
+  if (rank <= 25) return 'rank-tier3';
+  return 'rank-tier4';
+}
+
+function getFlagBadge(flag) {
+  if (flag === 'REGRESS') return '<span class="badge badge-regress">⬇ REGRESS</span>';
+  if (flag === 'IMPROVE') return '<span class="badge badge-improve">⬆ IMPROVE</span>';
+  if (flag === 'WATCH')   return '<span class="badge badge-watch">⚠ WATCH</span>';
+  return '<span class="badge badge-lock">✦ LOCKED</span>';
+}
+
+function getTypeLabel(type) {
+  const labels = {H:'HITTER', SP:'STARTER', RP:'CLOSER'};
+  return labels[type] || type;
+}
+
+function renderTable(data) {
+  const body = document.getElementById('tableBody');
+  body.innerHTML = '';
+  let lastTier = 0;
+
+  // Sort: rank 201 (Ohtani SP) sorts as 1.5 so it appears right after Ohtani DH
+  const sorted = [...data].sort((a,b) => {
+    const ra = a.rank === 201 ? 18.5 : a.rank;
+    const rb = b.rank === 201 ? 18.5 : b.rank;
+    return ra - rb;
+  });
+  sorted.forEach(p => {
+    let tier = p.rank === 201 ? 1 : p.rank <= 5 ? 1 : p.rank <= 12 ? 2 : p.rank <= 25 ? 3 : p.rank <= 50 ? 4 : p.rank <= 80 ? 5 : p.rank <= 110 ? 6 : p.rank <= 140 ? 7 : p.rank <= 165 ? 8 : p.rank <= 185 ? 9 : 10;
+    if (tier !== lastTier) {
+      const tierNames = {1:'TIER 1 — UNTOUCHABLE',2:'TIER 2 — ELITE FIRST ROUNDERS',3:'TIER 3 — LEGITIMATE FIRST ROUNDERS',4:'TIER 4 — STRONG ROUNDS 2-3',5:'TIER 5 — ROUNDS 3-5 VALUE',6:'TIER 6 — ROUNDS 5-7 TARGETS',7:'TIER 7 — ROUNDS 7-9',8:'TIER 8 — ROUNDS 9-12',9:'TIER 9 — ROUNDS 12-16',10:'TIER 10 — LATE ROUNDS / STREAMERS'};
+      const div = document.createElement('tr');
+      div.className = 'tier-divider';
+      div.innerHTML = `<td colspan="8">${tierNames[tier]}</td>`;
+      body.appendChild(div);
+      lastTier = tier;
+    }
+
+    const isDrafted = draftedSet.has(p.rank);
+    const isMyPick  = myPickSet.has(p.rank);
+
+    const row = document.createElement('tr');
+    row.setAttribute('data-flag', p.flag);
+    row.setAttribute('data-type', p.type);
+    row.setAttribute('data-name', (p.name + ' ' + p.team).toLowerCase());
+    row.setAttribute('data-rank', p.rank);
+    if (isDrafted && !isMyPick) row.classList.add('drafted');
+    if (isMyPick)               row.classList.add('my-pick');
+
+    let statusCell = '';
+    if (isMyPick) {
+      statusCell = `
+        <span class="my-pick-tag">★ MY PICK</span><br>
+        <button class="pick-btn" style="margin-top:4px" onclick="toggleMyPick(${p.rank})">↩ UNDO</button>`;
+    } else if (isDrafted) {
+      statusCell = `
+        <span class="drafted-tag">✗ DRAFTED</span><br>
+        <button class="draft-btn" style="margin-top:4px" onclick="toggleDrafted(${p.rank})">↩ UNDO</button>`;
+    } else {
+      statusCell = `
+        <button class="pick-btn" onclick="toggleMyPick(${p.rank})" title="Mark as your pick">★ MY PICK</button><br>
+        <button class="draft-btn" style="margin-top:4px" onclick="toggleDraftedOnly(${p.rank})" title="Mark as drafted by someone else">✗ DRAFTED</button>`;
+    }
+
+    row.innerHTML = `
+      <td class="rank ${getRankClass(p.rank)}">${p.displayRank || p.rank}</td>
+      <td>
+        <div class="player-name">${p.name}</div>
+        <div class="team-pos"><span class="pos-badge">${p.pos}</span>${p.team}</div>
+      </td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${getTypeLabel(p.type)}</span></td>
+      <td class="metric-val ${p.m1c}">${p.m1}</td>
+      <td class="metric-val ${p.m2c}">${p.m2}</td>
+      <td class="metric-val ${p.m3c}">${p.m3}</td>
+      <td class="flags-cell">${getFlagBadge(p.flag)}</td>
+      <td class="analysis-cell">${p.analysis}</td>
+      <td style="white-space:nowrap;min-width:140px;vertical-align:middle">${statusCell}</td>
+    `;
+    body.appendChild(row);
+  });
+
+  document.getElementById('countDisplay').textContent = `Showing ${data.length} of ${players.length} players`;
+}
+
+// ── MY PICKS STATE ──────────────────────────────────────────
+const MY_PICKS_KEY = 'fantasyMyPicks2026';
+let myPickSet = new Set();
+
+function loadMyPicks() {
+  try {
+    const saved = localStorage.getItem(MY_PICKS_KEY);
+    if (saved) myPickSet = new Set(JSON.parse(saved));
+  } catch(e) { myPickSet = new Set(); }
+}
+
+function saveMyPicks() {
+  try { localStorage.setItem(MY_PICKS_KEY, JSON.stringify([...myPickSet])); }
+  catch(e) { console.warn('Could not save picks', e); }
+}
+
+function toggleMyPick(rank) {
+  if (myPickSet.has(rank)) {
+    myPickSet.delete(rank);
+    // If un-picking, also remove from drafted
+    draftedSet.delete(rank);
+  } else {
+    myPickSet.add(rank);
+    draftedSet.add(rank);
+  }
+  saveMyPicks();
+  saveDraftState();
+  updateCounters();
+  updateDashboard();
+  applyFilters();
+}
+
+// "Drafted by someone else" — not my pick
+function toggleDraftedOnly(rank) {
+  if (myPickSet.has(rank)) myPickSet.delete(rank);
+  if (draftedSet.has(rank)) {
+    draftedSet.delete(rank); // toggle off if already drafted
+  } else {
+    draftedSet.add(rank);
+  }
+  saveMyPicks();
+  saveDraftState();
+  updateCounters();
+  updateDashboard();
+  applyFilters();
+}
+
+function updateCounters() {
+  document.getElementById('draftedCount').textContent = draftedSet.size;
+  document.getElementById('myPicksCount').textContent = myPickSet.size;
+}
+
+// ── DASHBOARD ENGINE ─────────────────────────────────────────
+
+// Each player tagged with category contributions and slot info
+// cats: array of category keys they help with
+// slots: primary position slots they can fill
+// The league roster: C, 1B, 2B, 3B, SS, OF, OF, OF, Util, SP, SP, RP, RP, P, P, P
+const ROSTER_SLOTS = [
+  {id:'C',    label:'C',    pos:['C']},
+  {id:'1B',   label:'1B',   pos:['1B']},
+  {id:'2B',   label:'2B',   pos:['2B']},
+  {id:'3B',   label:'3B',   pos:['3B']},
+  {id:'SS',   label:'SS',   pos:['SS']},
+  {id:'OF1',  label:'OF',   pos:['OF']},
+  {id:'OF2',  label:'OF',   pos:['OF']},
+  {id:'OF3',  label:'OF',   pos:['OF']},
+  {id:'UTIL', label:'UTIL', pos:['1B','2B','3B','SS','OF','DH','C']},
+  {id:'SP1',  label:'SP',   pos:['SP']},
+  {id:'SP2',  label:'SP',   pos:['SP']},
+  {id:'RP1',  label:'RP',   pos:['RP']},
+  {id:'RP2',  label:'RP',   pos:['RP']},
+  {id:'P1',   label:'P',    pos:['SP','RP']},
+  {id:'P2',   label:'P',    pos:['SP','RP']},
+  {id:'P3',   label:'P',    pos:['SP','RP']},
+];
+
+// Category contribution map per player rank
+// cats: which categories the player meaningfully helps
+// posEligible: simplified list of slots this player can fill
+const playerMeta = {
+  1:   {cats:['OBP','HR','R','RBI'],             slots:['OF']},        // Judge
+  2:   {cats:['HR','R','RBI','SB'],              slots:['SS']},        // Witt
+  3:   {cats:['OBP','HR','R','RBI','SB'],        slots:['DH','OF']},   // Ohtani DH
+  201: {cats:['K','ERA','WHIP','W'],             slots:['SP']},        // Ohtani SP
+  2:  {cats:['OBP','HR','R','RBI'],             slots:['OF']},
+  3:  {cats:['HR','R','RBI','SB'],              slots:['SS']},
+  4:  {cats:['OBP','HR','R','RBI'],             slots:['OF']},
+  5:  {cats:['HR','R','RBI','SB','OBP'],        slots:['3B']},
+  6:  {cats:['OBP','HR','R','RBI','SB'],        slots:['OF']},
+  7:  {cats:['OBP','HR','R','RBI','SB'],        slots:['SS','3B']},
+  8:  {cats:['HR','R','RBI','SB'],              slots:['SS','3B']},
+  9:  {cats:['OBP','HR','R','RBI','SB'],        slots:['OF']},
+  10: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  11: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  12: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  13: {cats:['HR','R','RBI','SB'],              slots:['OF']},
+  14: {cats:['R','RBI','SB','OBP'],             slots:['OF']},
+  15: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  16: {cats:['OBP','HR','R','RBI'],             slots:['OF','DH']},
+  17: {cats:['HR','R','RBI','SB','OBP'],        slots:['2B','SS']},
+  18: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  19: {cats:['K','ERA','WHIP'],                 slots:['SP']},
+  20: {cats:['OBP','HR','R','RBI'],             slots:['1B']},
+  21: {cats:['SV','K','ERA','WHIP'],            slots:['RP']},
+  22: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  23: {cats:['OBP','HR','R','RBI','SB'],        slots:['OF','2B']},
+  24: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  25: {cats:['HR','R','RBI'],                   slots:['1B']},
+  26: {cats:['ERA','WHIP','W'],                 slots:['SP']},
+  27: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  28: {cats:['ERA','WHIP','W'],                 slots:['SP']},
+  29: {cats:['SV','K','ERA','WHIP'],            slots:['RP']},
+  30: {cats:['SV','K','ERA','WHIP'],            slots:['RP']},
+  31: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  32: {cats:['SV','ERA','WHIP'],                slots:['RP']},
+  33: {cats:['SV','K','ERA','WHIP'],            slots:['RP']},
+  34: {cats:['HR','R','RBI','SB','OBP'],        slots:['OF']},
+  35: {cats:['OBP','HR','R','RBI'],             slots:['1B']},
+  36: {cats:['HR','R','RBI','SB','OBP'],        slots:['OF']},
+  37: {cats:['HR','R','RBI','SB','OBP'],        slots:['OF']},
+  38: {cats:['OBP','HR','R','RBI'],             slots:['OF','DH']},
+  39: {cats:['OBP','HR','R','RBI'],             slots:['3B']},
+  40: {cats:['OBP','HR','R','RBI'],             slots:['C']},
+  41: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  42: {cats:['ERA','WHIP','W'],                 slots:['SP']},
+  43: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  44: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  45: {cats:['R','RBI','SB','OBP'],             slots:['SS']},
+  46: {cats:['OBP','HR','R','RBI'],             slots:['C']},
+  47: {cats:['OBP','HR','R','RBI'],             slots:['C']},
+  48: {cats:['HR','R','RBI','OBP'],             slots:['OF','DH']},
+  49: {cats:['K','ERA','WHIP'],                 slots:['SP']},
+  50: {cats:['HR','R','RBI','SB'],              slots:['OF']},
+  51: {cats:['OBP','HR','R','RBI'],             slots:['OF']},
+  52: {cats:['OBP','HR','R','RBI'],             slots:['OF','DH']},
+  53: {cats:['OBP','HR','R','SB'],              slots:['2B','SS']},
+  54: {cats:['OBP','R','SB'],                   slots:['2B']},
+  55: {cats:['HR','R','RBI','SB'],              slots:['OF']},
+  56: {cats:['HR','R','RBI','SB'],              slots:['SS']},
+  57: {cats:['R','SB','OBP'],                   slots:['2B','SS']},
+  58: {cats:['HR','R','RBI','SB'],              slots:['OF']},
+  59: {cats:['K','ERA','WHIP'],                 slots:['SP']},
+  60: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  61: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  62: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  63: {cats:['HR','R','RBI'],                   slots:['1B','OF']},
+  64: {cats:['K','ERA','WHIP'],                 slots:['SP']},
+  65: {cats:['HR','R','RBI','SB'],              slots:['2B']},
+  66: {cats:['R','RBI','SB'],                   slots:['SS']},
+  67: {cats:['HR','R','RBI'],                   slots:['3B']},
+  68: {cats:['OBP','R'],                        slots:['OF']},
+  69: {cats:['OBP','HR','R','RBI'],             slots:['OF','DH']},
+  70: {cats:['HR','R','RBI','SB'],              slots:['OF','C']},
+  71: {cats:['OBP','R','SB'],                   slots:['SS']},
+  72: {cats:['SB'],                             slots:['OF']},
+  73: {cats:['OBP','R'],                        slots:['1B','3B','DH']},
+  74: {cats:['SB'],                             slots:['OF']},
+  75: {cats:['R','SB'],                         slots:['OF']},
+  76: {cats:['OBP','HR','R'],                   slots:['C']},
+  77: {cats:['HR','R','RBI','SB'],              slots:['3B','OF']},
+  78: {cats:['K','ERA'],                        slots:['SP']},
+  79: {cats:['HR','R','RBI'],                   slots:['1B','3B']},
+  80: {cats:['OBP','HR','R'],                   slots:['OF','DH']},
+  81: {cats:['OBP','HR','R'],                   slots:['OF']},
+  82: {cats:['R','SB'],                         slots:['3B','SS','2B','OF']},
+  83: {cats:['HR','R','RBI'],                   slots:['3B']},
+  84: {cats:['HR','R','RBI','OBP'],             slots:['2B','3B']},
+  85: {cats:['HR','R','RBI'],                   slots:['OF','1B']},
+  86: {cats:['SB','OBP'],                       slots:['SS','2B','3B']},
+  87: {cats:['R','RBI','OBP'],                  slots:['2B','SS']},
+  88: {cats:['ERA','WHIP','W'],                 slots:['SP']},
+  89: {cats:['K','ERA','WHIP'],                 slots:['SP']},
+  90: {cats:['HR','R','RBI'],                   slots:['SS']},
+  91: {cats:['OBP','HR','R'],                   slots:['OF']},
+  92: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  93: {cats:['HR','R','RBI'],                   slots:['OF']},
+  94: {cats:['OBP','HR','R','RBI'],             slots:['1B']},
+  95: {cats:['OBP','HR','R'],                   slots:['1B','2B']},
+  96: {cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  97: {cats:['HR','R','RBI'],                   slots:['1B']},
+  98: {cats:['HR','R','RBI'],                   slots:['3B']},
+  99: {cats:['SB','R'],                         slots:['SS']},
+  100:{cats:['OBP','HR','R'],                   slots:['2B','3B']},
+  101:{cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  102:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  103:{cats:['HR','R','RBI'],                   slots:['1B','DH']},
+  104:{cats:['HR','R','RBI','OBP'],             slots:['SS']},
+  105:{cats:['SB','R'],                         slots:['2B']},
+  106:{cats:['ERA','WHIP','W'],                 slots:['SP']},
+  107:{cats:['OBP','R','SB'],                   slots:['2B','3B','OF']},
+  108:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  109:{cats:['SV','ERA'],                       slots:['RP']},
+  110:{cats:['SV','K','ERA','WHIP'],            slots:['RP']},
+  111:{cats:['HR','R','RBI'],                   slots:['3B','1B']},
+  112:{cats:['OBP','R'],                        slots:['C']},
+  113:{cats:['ERA'],                            slots:['SP']},
+  115:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  116:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  117:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  118:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  119:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  120:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  121:{cats:['HR','R','RBI','OBP'],             slots:['SS']},
+  122:{cats:['HR','R','RBI'],                   slots:['OF']},
+  123:{cats:['OBP','HR','R'],                   slots:['3B']},
+  124:{cats:['OBP','HR','R'],                   slots:['1B','3B','DH']},
+  125:{cats:['R','SB'],                         slots:['SS']},
+  126:{cats:['OBP','HR'],                       slots:['C']},
+  127:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  128:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  129:{cats:['ERA','WHIP'],                     slots:['SP']},
+  130:{cats:['SV','ERA','WHIP'],                slots:['RP']},
+  131:{cats:['OBP','HR','R','RBI'],             slots:['2B']},
+  132:{cats:['OBP'],                            slots:['1B','2B']},
+  133:{cats:['R','SB','OBP'],                   slots:['OF','2B','SS']},
+  134:{cats:['OBP','HR'],                       slots:['C']},
+  135:{cats:['K','ERA','WHIP','W'],             slots:['SP']},
+  136:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  137:{cats:['OBP','HR','R','SB'],              slots:['SS']},
+  138:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  139:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  140:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  141:{cats:['OBP','HR','R'],                   slots:['1B','2B']},
+  145:{cats:['HR','R','RBI'],                   slots:['1B']},
+  149:{cats:['OBP','HR'],                       slots:['C']},
+  150:{cats:['OBP','R','SB'],                   slots:['2B','SS']},
+  151:{cats:['HR','R','RBI','SB'],              slots:['OF']},
+  152:{cats:['HR','R','RBI'],                   slots:['SS','3B']},
+  157:{cats:['HR','R','RBI'],                   slots:['1B','OF']},
+  158:{cats:['SB','OBP'],                       slots:['OF']},
+  159:{cats:['SV','K'],                         slots:['RP']},
+  162:{cats:['SV'],                             slots:['RP']},
+  165:{cats:['HR','R','RBI'],                   slots:['OF','1B']},
+  168:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  169:{cats:['SV','K'],                         slots:['RP']},
+  174:{cats:['OBP','HR','R'],                   slots:['1B']},
+  176:{cats:['R','SB'],                         slots:['SS','OF']},
+  177:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  178:{cats:['ERA','WHIP','W'],                 slots:['SP']},
+  179:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  181:{cats:['HR','R','RBI','OBP'],             slots:['3B']},
+  185:{cats:['SV','K'],                         slots:['RP']},
+  195:{cats:['K','ERA','WHIP'],                 slots:['SP']},
+  196:{cats:['ERA','WHIP'],                     slots:['SP']},
+  197:{cats:['SV'],                             slots:['RP']},
+  200:{cats:['SV','K'],                         slots:['RP']},
+};
+
+// Default for players not in meta
+function getMeta(rank) {
+  if (playerMeta[rank]) return playerMeta[rank];
+  const p = players.find(x => x.rank === rank);
+  if (!p) return {cats:[], slots:[]};
+  const slots = p.type === 'SP' ? ['SP'] : p.type === 'RP' ? ['RP'] : ['OF'];
+  const cats   = p.type === 'SP' ? ['K','ERA','WHIP'] : p.type === 'RP' ? ['SV','ERA'] : ['HR','R','RBI'];
+  return {cats, slots};
+}
+
+const ALL_CATS = ['OBP','HR','R','RBI','SB','W','SV','K','ERA','WHIP'];
+const CAT_LABELS = {OBP:'OBP',HR:'HR',R:'RUNS',RBI:'RBI',SB:'SB',W:'WINS',SV:'SAVES',K:'K',ERA:'ERA',WHIP:'WHIP'};
+
+// How many of my picks contribute to each category
+function calcCategoryScores() {
+  const scores = {};
+  ALL_CATS.forEach(c => scores[c] = 0);
+  myPickSet.forEach(rank => {
+    const meta = getMeta(rank);
+    meta.cats.forEach(c => { if (scores[c] !== undefined) scores[c]++; });
+  });
+  return scores;
+}
+
+function gradeCategory(cat, count) {
+  // Expected needed count to be competitive
+  const thresholds = {
+    OBP: {A:5, B:4, C:3, D:2},
+    HR:  {A:6, B:5, C:3, D:2},
+    R:   {A:6, B:5, C:3, D:2},
+    RBI: {A:5, B:4, C:3, D:2},
+    SB:  {A:3, B:2, C:1, D:1},
+    W:   {A:4, B:3, C:2, D:1},
+    SV:  {A:2, B:1, C:1, D:1},
+    K:   {A:5, B:4, C:3, D:2},
+    ERA: {A:4, B:3, C:2, D:1},
+    WHIP:{A:4, B:3, C:2, D:1},
+  };
+  const t = thresholds[cat] || {A:4,B:3,C:2,D:1};
+  if (count >= t.A) return 'A';
+  if (count >= t.B) return 'B';
+  if (count >= t.C) return 'C';
+  if (count >= t.D) return 'D';
+  return 'F';
+}
+
+function fillPercent(grade) {
+  return {A:100,B:78,C:56,D:34,F:12}[grade] || 0;
+}
+
+// Assign my picks to roster slots greedily
+function buildRoster() {
+  const filled = {}; // slotId -> player
+  const myPicks = [...myPickSet].map(r => players.find(p => p.rank === r)).filter(Boolean);
+
+  // Sort my picks by rank (best first)
+  myPicks.sort((a,b) => a.rank - b.rank);
+
+  // Track which picks are assigned
+  const assigned = new Set();
+
+  ROSTER_SLOTS.forEach(slot => {
+    for (const p of myPicks) {
+      if (assigned.has(p.rank)) continue;
+      const meta = getMeta(p.rank);
+      const canFill = meta.slots.some(s => slot.pos.includes(s));
+      if (canFill) {
+        filled[slot.id] = p;
+        assigned.add(p.rank);
+        break;
+      }
+    }
+  });
+  return filled;
+}
+
+function updateDashboard() {
+  if (myPickSet.size === 0) {
+    document.getElementById('rosterGrid').innerHTML = '<div style="color:var(--muted);font-size:11px;font-family:\'DM Mono\',monospace;padding:4px 0">Mark picks as ★ MY PICK to track your roster</div>';
+    document.getElementById('catGrid').innerHTML = '<div style="color:var(--muted);font-size:11px;font-family:\'DM Mono\',monospace">Pick players to see category strength</div>';
+    document.getElementById('recPanel').innerHTML = '<div class="rec-empty">Mark your picks to get live recommendations →</div>';
+    return;
+  }
+
+  // ── ROSTER GRID ──
+  const filled = buildRoster();
+  const rosterEl = document.getElementById('rosterGrid');
+  rosterEl.innerHTML = ROSTER_SLOTS.map(slot => {
+    const p = filled[slot.id];
+    if (p) {
+      return `<div class="slot filled">
+        <span class="slot-pos">${slot.label}</span>
+        <span class="slot-name">${p.name.split(' ').pop()}</span>
+      </div>`;
+    }
+    return `<div class="slot needed">
+      <span class="slot-pos">${slot.label}</span>
+      <span class="slot-name">NEEDED</span>
+    </div>`;
+  }).join('');
+
+  // ── CATEGORY SCORES ──
+  const scores = calcCategoryScores();
+  const catEl = document.getElementById('catGrid');
+  catEl.innerHTML = ALL_CATS.map(cat => {
+    const grade = gradeCategory(cat, scores[cat]);
+    const pct = fillPercent(grade);
+    return `<div class="cat-row">
+      <div class="cat-header">
+        <span class="cat-name">${CAT_LABELS[cat]}</span>
+        <span class="cat-grade ${grade}">${grade}</span>
+      </div>
+      <div class="cat-bar-bg">
+        <div class="cat-bar-fill ${grade}" style="width:${pct}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── RECOMMENDATIONS ──
+  const recs = [];
+  const totalPicks = myPickSet.size;
+
+  // Find weakest categories
+  const weakCats = ALL_CATS
+    .map(c => ({cat: c, grade: gradeCategory(c, scores[c]), count: scores[c]}))
+    .filter(x => 'DF'.includes(x.grade))
+    .sort((a,b) => (a.grade === b.grade ? a.count - b.count : (a.grade > b.grade ? -1 : 1)));
+
+  // Find unfilled roster positions
+  const unfilledSlots = ROSTER_SLOTS.filter(s => !filled[s.id]).map(s => s.label);
+  const unfilledSet = [...new Set(unfilledSlots)];
+
+  // Position needs
+  const needsC  = !ROSTER_SLOTS.filter(s=>s.id==='C').some(s=>filled[s.id]);
+  const needsSP = ROSTER_SLOTS.filter(s=>s.id.startsWith('SP')).filter(s=>!filled[s.id]).length > 0;
+  const needsRP = ROSTER_SLOTS.filter(s=>s.id.startsWith('RP')).filter(s=>!filled[s.id]).length > 0;
+  const needsP  = ROSTER_SLOTS.filter(s=>s.id.startsWith('P')).filter(s=>!filled[s.id]).length > 0;
+  const spCount = [...myPickSet].filter(r => (playerMeta[r]||{cats:[]}).cats?.includes?.('K') && (getMeta(r).slots.includes('SP'))).length ||
+                  [...myPickSet].map(r=>players.find(p=>p.rank===r)).filter(Boolean).filter(p=>p.type==='SP').length;
+  const rpCount = [...myPickSet].map(r=>players.find(p=>p.rank===r)).filter(Boolean).filter(p=>p.type==='RP').length;
+  const hCount  = [...myPickSet].map(r=>players.find(p=>p.rank===r)).filter(Boolean).filter(p=>p.type==='H').length;
+
+  // Position recommendations
+  if (unfilledSet.length > 0 && totalPicks < 16) {
+    if (needsC) recs.push({icon:'🎯', text:`<strong>FILL CATCHER</strong> — Will Smith (46) and Cal Raleigh (47) are the top OBP catchers available. Catcher is the scarcest position.`});
+    if (needsRP && rpCount < 2) recs.push({icon:'🎯', text:`<strong>ADD CLOSER</strong> — ${rpCount === 0 ? 'You have no closer yet.' : 'Only '+rpCount+' closer.'} Mason Miller (21), Díaz (29), or Cade Smith (30) are the top targets.`});
+    if (needsSP && spCount < 2) recs.push({icon:'🎯', text:`<strong>ADD STARTER</strong> — ${spCount === 0 ? 'No starters yet.' : spCount+' starter(s).'} With 7 pitcher slots and 30 IP minimum/week, you need 3-4 reliable SPs.`});
+  }
+
+  // Category recommendations
+  weakCats.slice(0, 3).forEach(({cat, grade}) => {
+    const catRecs = {
+      SB: 'Target: Witt (3), Ramirez (5), Acuna (6), De La Cruz (8), Carroll (34), or Keaschall (54). SB is the scarcest category — prioritize 30+ sprint speed profiles.',
+      SV: 'Target: Mason Miller (21), Díaz (29), Cade Smith (30), Durán (32), or Muñoz (33). Draft one elite closer early, stream the rest.',
+      W:  'Target SPs on good offenses — Crochet/BOS (12), Yamamoto/LAD (15), Hunter Brown/HOU (31), or Cole Ragans/KC (27).',
+      OBP:'Target walk-rate driven players: Judge (2), Soto (4), Freeman (20), Schwarber (38), Devers (39). OBP is MOST stable when BB%-driven.',
+      K:  'Target: Skubal (10), Skenes (11), Crochet (12), Ragans (27), Peralta (41). K% is the most predictable pitching category.',
+      HR: 'Target barrel rate 13%+: Judge (1), Ohtani DH (3), Alvarez (16), Olson (35), Alonso (145).',
+      ERA:'Add a ground-ball SP: Webb (26), Valdez (28), Sanchez (22), Kirby (42) or Ragans (27) all have elite ERA floors.',
+      WHIP:'Target low-BB% SPs: Kirby (42) has 2.9% BB%, Gilbert (18) 4.8%. Also Webb (26) and Valdez (28) with elite GB rates.',
+      R:  'Ensure hitters are in high-run lineups: Dodgers (Ohtani DH/Judge/Tucker/Freeman), Yankees, Phillies bats produce the most runs.',
+      RBI:'Power hitters in strong lineups: Alvarez (16), Olson (35), Devers (39). Run-producing context matters more than raw power.',
+    };
+    recs.push({icon:'📊', text: `<strong>${cat} IS ${grade}-GRADE</strong> — ${catRecs[cat] || 'Target players with multi-category value in this area.'}`});
+  });
+
+  // Balance check
+  if (hCount > 0 && spCount === 0 && totalPicks >= 3) {
+    recs.push({icon:'⚖️', text:`<strong>BALANCE CHECK</strong> — ${hCount} hitters, 0 starters. With 7 pitcher slots and a 30 IP/week minimum, you'll need starting pitching soon.`});
+  }
+  if (spCount >= 4 && hCount < 4 && totalPicks >= 6) {
+    recs.push({icon:'⚖️', text:`<strong>BALANCE CHECK</strong> — ${spCount} SPs, only ${hCount} hitters. Counting stats (R, HR, RBI, SB) require hitter depth. Consider a hitter next.`});
+  }
+
+  // Late round reminders
+  if (totalPicks >= 12) {
+    if (rpCount < 2) recs.push({icon:'💡', text:`<strong>CLOSER DEPTH</strong> — Only ${rpCount} closer. You have 4 RP/P flex spots. Adding a second closer improves SV coverage and ratio protection.`});
+    recs.push({icon:'💡', text:`<strong>LATE ROUND UPSIDE</strong> — Positive regression targets still available: Ben Rice (157), Jac Caglianone (63), Walker (130), Edwin Uceta (200). Check AVAILABLE + ⬆ IMPROVE filter.`});
+  }
+
+  if (recs.length === 0) {
+    recs.push({icon:'✅', text:'<strong>Well-balanced team</strong> — No major gaps detected. Focus on the highest-ranked available player. Use the ⬆ IMPROVE filter to find regression upside.'});
+  }
+
+  document.getElementById('recPanel').innerHTML = `
+    <div class="rec-title">NEXT PICK GUIDANCE</div>
+    ${recs.slice(0,5).map(r => `<div class="rec-item"><span class="rec-icon">${r.icon}</span><span class="rec-text">${r.text}</span></div>`).join('')}
+  `;
+}
+
+// ── FILTERS ──────────────────────────────────────────────────
+let activeFlag = 'ALL';
+let searchTerm = '';
+
+function filterTable() {
+  searchTerm = document.getElementById('searchBox').value.toLowerCase();
+  applyFilters();
+}
+
+function filterByFlag(flag, btn) {
+  activeFlag = flag;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  let filtered = players;
+
+  if (activeFlag === 'DRAFTED') {
+    filtered = filtered.filter(p => draftedSet.has(p.rank) && !myPickSet.has(p.rank));
+  } else if (activeFlag === 'MYPICKS') {
+    filtered = filtered.filter(p => myPickSet.has(p.rank));
+  } else if (activeFlag === 'AVAILABLE') {
+    filtered = filtered.filter(p => !draftedSet.has(p.rank));
+  } else if (activeFlag === 'H') {
+    filtered = filtered.filter(p => p.type === 'H');
+  } else if (activeFlag === 'SP') {
+    filtered = filtered.filter(p => p.type === 'SP');
+  } else if (activeFlag === 'RP') {
+    filtered = filtered.filter(p => p.type === 'RP');
+  } else if (activeFlag !== 'ALL') {
+    filtered = filtered.filter(p => p.flag === activeFlag);
+  }
+
+  if (searchTerm) {
+    filtered = filtered.filter(p => (p.name + ' ' + p.team).toLowerCase().includes(searchTerm));
+  }
+
+  renderTable(filtered);
+}
+
+// ── BOOT ──────────────────────────────────────────────────────
+function init() {
+  loadDraftState();
+  loadMyPicks();
+  updateCounters();
+  updateDashboard();
+  applyFilters();
+}
+init();
+</script>
+</body>
+</html>
