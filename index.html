@@ -109,6 +109,17 @@
   }
   .filter-btn:hover { border-color: var(--accent); color: var(--text); }
   .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+  .filter-btn.active-status { background: #06b6d4; border-color: #06b6d4; color: #000; font-weight: 600; }
+  .filter-btn.active-type   { background: #8b5cf6; border-color: #8b5cf6; color: #fff; font-weight: 600; }
+  .filter-btn.active-flag   { background: var(--amber); border-color: var(--amber); color: #000; font-weight: 600; }
+
+  .filter-divider {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 4px;
+    flex-shrink: 0;
+  }
 
   .legend {
     display: flex;
@@ -348,7 +359,7 @@
   }
   .clear-btn:hover { border-color: var(--red); color: var(--red); }
 
-  .filter-btn.drafted-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
+  .filter-btn.drafted-btn.active-status { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
 
   /* ── MY TEAM DASHBOARD ── */
   .dashboard {
@@ -681,16 +692,35 @@
   </div>
   <div class="controls">
     <input class="search" type="text" id="searchBox" placeholder="Search player or team…" oninput="filterTable()">
-    <button class="filter-btn active" onclick="filterByFlag('ALL',this)">ALL (201)</button>
-    <button class="filter-btn" onclick="filterByFlag('REGRESS',this)">⬇ REGRESSION</button>
-    <button class="filter-btn" onclick="filterByFlag('IMPROVE',this)">⬆ IMPROVEMENT</button>
-    <button class="filter-btn" onclick="filterByFlag('WATCH',this)">⚠ WATCH</button>
-    <button class="filter-btn" onclick="filterByFlag('H',this)">HITTERS</button>
-    <button class="filter-btn" onclick="filterByFlag('SP',this)">STARTERS</button>
-    <button class="filter-btn" onclick="filterByFlag('RP',this)">CLOSERS</button>
-    <button class="filter-btn drafted-btn" onclick="filterByFlag('DRAFTED',this)">✗ DRAFTED</button>
-    <button class="filter-btn" onclick="filterByFlag('AVAILABLE',this)">AVAILABLE</button>
-    <button class="filter-btn" onclick="filterByFlag('MYPICKS',this)">★ MY PICKS</button>
+
+    <div class="filter-divider"></div>
+
+    <!-- STATUS GROUP — combinable, cyan -->
+    <span class="draft-setup-hint" style="font-size:9px;letter-spacing:1px">STATUS</span>
+    <button class="filter-btn" id="btn-AVAILABLE" onclick="toggleStatusFilter('AVAILABLE',this)">AVAILABLE</button>
+    <button class="filter-btn drafted-btn" id="btn-DRAFTED" onclick="toggleStatusFilter('DRAFTED',this)">✗ DRAFTED</button>
+    <button class="filter-btn" id="btn-MYPICKS" onclick="toggleStatusFilter('MYPICKS',this)">★ MY PICKS</button>
+
+    <div class="filter-divider"></div>
+
+    <!-- TYPE GROUP — combinable, purple -->
+    <span class="draft-setup-hint" style="font-size:9px;letter-spacing:1px">TYPE</span>
+    <button class="filter-btn" id="btn-H"  onclick="toggleTypeFilter('H',this)">HITTERS</button>
+    <button class="filter-btn" id="btn-SP" onclick="toggleTypeFilter('SP',this)">STARTERS</button>
+    <button class="filter-btn" id="btn-RP" onclick="toggleTypeFilter('RP',this)">CLOSERS</button>
+
+    <div class="filter-divider"></div>
+
+    <!-- FLAG GROUP — single-select, amber -->
+    <span class="draft-setup-hint" style="font-size:9px;letter-spacing:1px">FLAG</span>
+    <button class="filter-btn" id="btn-REGRESS" onclick="toggleFlagFilter('REGRESS',this)">⬇ REGRESS</button>
+    <button class="filter-btn" id="btn-IMPROVE" onclick="toggleFlagFilter('IMPROVE',this)">⬆ IMPROVE</button>
+    <button class="filter-btn" id="btn-WATCH"   onclick="toggleFlagFilter('WATCH',this)">⚠ WATCH</button>
+
+    <div class="filter-divider"></div>
+
+    <button class="filter-btn active" id="btn-ALL" onclick="clearAllFilters(this)" style="letter-spacing:1px">CLEAR</button>
+
     <div class="draft-counter">
       <strong id="draftedCount">0</strong> drafted
     </div>
@@ -1141,7 +1171,15 @@ function renderTable(data) {
     body.appendChild(row);
   });
 
-  document.getElementById('countDisplay').textContent = `Showing ${data.length} of ${players.length} players`;
+  // Build filter description
+  const filterParts = [];
+  if (activeStatus)       filterParts.push(activeStatus);
+  if (activeTypes.size)   filterParts.push([...activeTypes].join('+'));
+  if (activeFlag)         filterParts.push(activeFlag);
+  if (searchTerm)         filterParts.push(`"${searchTerm}"`);
+  const filterDesc = filterParts.length ? ` · Filters: ${filterParts.join(' + ')}` : '';
+  document.getElementById('countDisplay').textContent =
+    `Showing ${data.length} of ${players.length} players${filterDesc}`;
 }
 
 // ── MY PICKS STATE ──────────────────────────────────────────
@@ -1792,42 +1830,100 @@ function getPickWindowRange() {
 }
 
 // ── FILTERS ──────────────────────────────────────────────────
-let activeFlag = 'ALL';
-let searchTerm = '';
+// Three independent filter dimensions that stack (AND logic)
+let activeStatus = null;   // null | 'AVAILABLE' | 'DRAFTED' | 'MYPICKS'
+let activeTypes  = new Set(); // set of 'H', 'SP', 'RP'
+let activeFlag   = null;   // null | 'REGRESS' | 'IMPROVE' | 'WATCH'
+let searchTerm   = '';
+
+function toggleStatusFilter(val) {
+  activeStatus = (activeStatus === val) ? null : val;
+  const ids = ['AVAILABLE','DRAFTED','MYPICKS'];
+  ids.forEach(id => {
+    const btn = document.getElementById('btn-' + id);
+    if (btn) btn.classList.remove('active','active-status');
+  });
+  if (activeStatus) {
+    const btn = document.getElementById('btn-' + activeStatus);
+    if (btn) btn.classList.add('active-status');
+  }
+  applyFilters();
+}
+
+function toggleTypeFilter(val) {
+  if (activeTypes.has(val)) {
+    activeTypes.delete(val);
+  } else {
+    activeTypes.add(val);
+  }
+  ['H','SP','RP'].forEach(id => {
+    const btn = document.getElementById('btn-' + id);
+    if (btn) btn.classList.toggle('active-type', activeTypes.has(id));
+  });
+  applyFilters();
+}
+
+function toggleFlagFilter(val) {
+  activeFlag = (activeFlag === val) ? null : val;
+  ['REGRESS','IMPROVE','WATCH'].forEach(id => {
+    const btn = document.getElementById('btn-' + id);
+    if (btn) btn.classList.remove('active','active-flag');
+  });
+  if (activeFlag) {
+    const btn = document.getElementById('btn-' + activeFlag);
+    if (btn) btn.classList.add('active-flag');
+  }
+  applyFilters();
+}
+
+function clearAllFilters() {
+  activeStatus = null;
+  activeTypes.clear();
+  activeFlag = null;
+  searchTerm = '';
+  document.getElementById('searchBox').value = '';
+  ['AVAILABLE','DRAFTED','MYPICKS','H','SP','RP','REGRESS','IMPROVE','WATCH'].forEach(id => {
+    const btn = document.getElementById('btn-' + id);
+    if (btn) btn.classList.remove('active','active-status','active-type','active-flag');
+  });
+  applyFilters();
+}
 
 function filterTable() {
   searchTerm = document.getElementById('searchBox').value.toLowerCase();
   applyFilters();
 }
 
-function filterByFlag(flag, btn) {
-  activeFlag = flag;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  applyFilters();
-}
+// Keep legacy filterByFlag as no-op safety net (no longer called)
+function filterByFlag() {}
 
 function applyFilters() {
   let filtered = players;
 
-  if (activeFlag === 'DRAFTED') {
-    filtered = filtered.filter(p => draftedSet.has(p.rank) && !myPickSet.has(p.rank));
-  } else if (activeFlag === 'MYPICKS') {
-    filtered = filtered.filter(p => myPickSet.has(p.rank));
-  } else if (activeFlag === 'AVAILABLE') {
+  // STATUS filter (cyan group)
+  if (activeStatus === 'AVAILABLE') {
     filtered = filtered.filter(p => !draftedSet.has(p.rank));
-  } else if (activeFlag === 'H') {
-    filtered = filtered.filter(p => p.type === 'H');
-  } else if (activeFlag === 'SP') {
-    filtered = filtered.filter(p => p.type === 'SP');
-  } else if (activeFlag === 'RP') {
-    filtered = filtered.filter(p => p.type === 'RP');
-  } else if (activeFlag !== 'ALL') {
+  } else if (activeStatus === 'DRAFTED') {
+    filtered = filtered.filter(p => draftedSet.has(p.rank) && !myPickSet.has(p.rank));
+  } else if (activeStatus === 'MYPICKS') {
+    filtered = filtered.filter(p => myPickSet.has(p.rank));
+  }
+
+  // TYPE filter (purple group) — if any selected, show union of selected types
+  if (activeTypes.size > 0) {
+    filtered = filtered.filter(p => activeTypes.has(p.type));
+  }
+
+  // FLAG filter (amber group)
+  if (activeFlag) {
     filtered = filtered.filter(p => p.flag === activeFlag);
   }
 
+  // Search
   if (searchTerm) {
-    filtered = filtered.filter(p => (p.name + ' ' + p.team).toLowerCase().includes(searchTerm));
+    filtered = filtered.filter(p =>
+      (p.name + ' ' + p.team).toLowerCase().includes(searchTerm)
+    );
   }
 
   renderTable(filtered);
