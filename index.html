@@ -583,6 +583,93 @@
     font-size: 16px;
     letter-spacing: 1px;
   }
+
+  /* ── DRAFT POSITION TRACKER ── */
+  .draft-setup-bar {
+    background: #080d14;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .draft-setup-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .draft-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    width: 56px;
+    text-align: center;
+    outline: none;
+  }
+  .draft-input:focus { border-color: var(--accent); }
+  .draft-setup-hint { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+
+  .pick-timeline {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+  .pick-bubble {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    min-width: 46px;
+    transition: all 0.15s;
+  }
+  .pick-bubble.completed  { opacity: 0.35; }
+  .pick-bubble.current-pick { border-color: var(--accent); background:#06b6d415; box-shadow:0 0 8px #06b6d430; }
+  .pick-bubble.next-pick  { border-color: var(--amber); background:#f59e0b0a; }
+  .pick-round { font-family:'DM Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:.5px; }
+  .pick-bubble.current-pick .pick-round { color:var(--accent); }
+  .pick-bubble.next-pick   .pick-round { color:var(--amber); }
+  .pick-number { font-family:'Bebas Neue',sans-serif; font-size:16px; line-height:1; color:var(--text); }
+  .pick-bubble.current-pick .pick-number { color:var(--accent); }
+  .pick-bubble.next-pick   .pick-number { color:var(--amber); }
+  .pick-bubble.completed   .pick-number { color:var(--muted); }
+  .pick-avail { font-family:'DM Mono',monospace; font-size:8px; color:var(--muted); white-space:nowrap; }
+  .pick-arrow { color:var(--border); font-size:11px; flex-shrink:0; }
+
+  .next-pick-banner {
+    background: linear-gradient(90deg,#f59e0b10,transparent);
+    border:1px solid #f59e0b33;
+    border-radius:6px;
+    padding:6px 12px;
+    font-size:11px;
+    color:var(--text);
+    font-family:'DM Sans',sans-serif;
+    white-space:nowrap;
+  }
+  .next-pick-banner strong { color:var(--amber); }
+
+  tr.in-pick-window { background: #f59e0b05 !important; }
+  tr.in-pick-window .rank { position:relative; }
+  tr.in-pick-window .rank::after {
+    content:'◄';
+    color:var(--amber);
+    font-size:8px;
+    position:absolute;
+    right:-2px;
+    top:50%;
+    transform:translateY(-50%);
+  }
 </style>
 </head>
 <body>
@@ -619,6 +706,30 @@
   <div class="legend-item"><span class="badge badge-improve">⬆ IMPROVE</span> Underlying metrics better than surface stats — positive correction likely</div>
   <div class="legend-item"><span class="badge badge-watch">⚠ WATCH</span> Mixed signals — volatility in either direction</div>
   <div class="legend-item"><span class="badge badge-lock">✦ LOCKED</span> Metrics and surface stats fully aligned — safe floor</div>
+</div>
+
+<!-- DRAFT POSITION SETUP -->
+<div class="draft-setup-bar" id="draftSetupBar">
+  <div class="draft-setup-label">SNAKE DRAFT</div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="draft-setup-hint">YOUR POSITION</span>
+    <input class="draft-input" type="number" id="draftPosition" min="1" max="12" placeholder="1-12" oninput="onDraftSettingsChange()">
+    <span class="draft-setup-hint">of</span>
+    <input class="draft-input" type="number" id="totalTeams" min="2" max="20" value="12" oninput="onDraftSettingsChange()">
+    <span class="draft-setup-hint">teams</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="draft-setup-hint">TOTAL ROUNDS</span>
+    <input class="draft-input" type="number" id="totalRounds" min="10" max="30" value="23" oninput="onDraftSettingsChange()">
+  </div>
+
+  <div class="pick-timeline" id="pickTimeline">
+    <span class="draft-setup-hint" style="padding:4px 0">Enter your draft position to see your pick schedule →</span>
+  </div>
+
+  <div class="next-pick-banner" id="nextPickBanner" style="display:none"></div>
 </div>
 
 <!-- LIVE TEAM DASHBOARD -->
@@ -688,6 +799,7 @@ function toggleDrafted(rank) {
   }
   saveDraftState();
   updateDraftCounter();
+  renderPickTimeline();
   applyFilters();
 }
 
@@ -699,6 +811,7 @@ function clearAllDrafted() {
     localStorage.removeItem(MY_PICKS_KEY);
   } catch(e) {}
   updateCounters();
+  renderPickTimeline();
   updateDashboard();
   applyFilters();
 }
@@ -980,6 +1093,13 @@ function renderTable(data) {
     const isDrafted = draftedSet.has(p.rank);
     const isMyPick  = myPickSet.has(p.rank);
 
+    // Pick window: highlight rows that will likely still be available at my next pick
+    const pickWindow = getPickWindowRange();
+    const displayRankNum = p.rank === 201 ? 18.5 : p.rank;
+    const inPickWindow = !isDrafted && pickWindow &&
+                         displayRankNum >= pickWindow.lo &&
+                         displayRankNum <= pickWindow.hi;
+
     const row = document.createElement('tr');
     row.setAttribute('data-flag', p.flag);
     row.setAttribute('data-type', p.type);
@@ -987,6 +1107,7 @@ function renderTable(data) {
     row.setAttribute('data-rank', p.rank);
     if (isDrafted && !isMyPick) row.classList.add('drafted');
     if (isMyPick)               row.classList.add('my-pick');
+    if (inPickWindow)           row.classList.add('in-pick-window');
 
     let statusCell = '';
     if (isMyPick) {
@@ -1042,7 +1163,6 @@ function saveMyPicks() {
 function toggleMyPick(rank) {
   if (myPickSet.has(rank)) {
     myPickSet.delete(rank);
-    // If un-picking, also remove from drafted
     draftedSet.delete(rank);
   } else {
     myPickSet.add(rank);
@@ -1051,6 +1171,7 @@ function toggleMyPick(rank) {
   saveMyPicks();
   saveDraftState();
   updateCounters();
+  renderPickTimeline();
   updateDashboard();
   applyFilters();
 }
@@ -1059,13 +1180,14 @@ function toggleMyPick(rank) {
 function toggleDraftedOnly(rank) {
   if (myPickSet.has(rank)) myPickSet.delete(rank);
   if (draftedSet.has(rank)) {
-    draftedSet.delete(rank); // toggle off if already drafted
+    draftedSet.delete(rank);
   } else {
     draftedSet.add(rank);
   }
   saveMyPicks();
   saveDraftState();
   updateCounters();
+  renderPickTimeline();
   updateDashboard();
   applyFilters();
 }
@@ -1108,8 +1230,6 @@ const playerMeta = {
   2:   {cats:['HR','R','RBI','SB'],              slots:['SS']},        // Witt
   3:   {cats:['OBP','HR','R','RBI','SB'],        slots:['DH','OF']},   // Ohtani DH
   201: {cats:['K','ERA','WHIP','W'],             slots:['SP']},        // Ohtani SP
-  2:  {cats:['OBP','HR','R','RBI'],             slots:['OF']},
-  3:  {cats:['HR','R','RBI','SB'],              slots:['SS']},
   4:  {cats:['OBP','HR','R','RBI'],             slots:['OF']},
   5:  {cats:['HR','R','RBI','SB','OBP'],        slots:['3B']},
   6:  {cats:['OBP','HR','R','RBI','SB'],        slots:['OF']},
@@ -1394,6 +1514,38 @@ function updateDashboard() {
   const recs = [];
   const totalPicks = myPickSet.size;
 
+  // Pick timing context
+  const nextPick     = getNextMyPick();
+  const futurePicks  = getFutureMyPicks(4);
+  const currentRound = getCurrentRound();
+  const picksUntilNext = nextPick ? (nextPick.overall - getCurrentOverallPick()) : 0;
+
+  // Insert pick timing header rec if draft position is set
+  if (draftPos && nextPick) {
+    const urgency = picksUntilNext === 0 ? '🚨 ON THE CLOCK' :
+                    picksUntilNext <= 2  ? '⚡ PICKING SOON' : '🗓 UPCOMING';
+    const windowText = picksUntilNext === 0
+      ? `You are on the clock now (overall pick #${nextPick.overall}, Round ${nextPick.round}).`
+      : `${picksUntilNext} pick${picksUntilNext === 1 ? '' : 's'} until your next turn (R${nextPick.round}, #${nextPick.overall} overall).`;
+
+    // Estimate what tier is available at next pick
+    const avail = nextPick.overall <= 12  ? 'Tier 1-2 player (elite anchor)'  :
+                  nextPick.overall <= 36  ? 'Tier 3 player (strong R1/R2)'    :
+                  nextPick.overall <= 72  ? 'Tier 4-5 player (solid R3-5)'    :
+                  nextPick.overall <= 120 ? 'Tier 6-7 player (R6-9 value)'    :
+                  nextPick.overall <= 168 ? 'Tier 8-9 player (R10-14 depth)'  : 'Tier 10 (streamer/upside)';
+    recs.push({icon: urgency.split(' ')[0], text: `<strong>${urgency}</strong> — ${windowText} Expect a <strong>${avail}</strong> to still be on the board.`});
+
+    // If multiple picks coming soon (back-to-back snake turns), flag it
+    if (futurePicks.length >= 2) {
+      const secondPick = futurePicks[1];
+      const gapBetween = secondPick.overall - nextPick.overall;
+      if (gapBetween <= totalTeams) {
+        recs.push({icon:'🔄', text:`<strong>BACK-TO-BACK PICKS</strong> — After R${nextPick.round} (#${nextPick.overall}), your next pick is R${secondPick.round} (#${secondPick.overall}) — only ${gapBetween} picks apart. Consider drafting complementary players: if you take a SP at #${nextPick.overall}, target a hitter at #${secondPick.overall} (or vice versa).`});
+      }
+    }
+  }
+
   // Find weakest categories
   const weakCats = ALL_CATS
     .map(c => ({cat: c, grade: gradeCategory(c, scores[c]), count: scores[c]}))
@@ -1405,61 +1557,238 @@ function updateDashboard() {
   const unfilledSet = [...new Set(unfilledSlots)];
 
   // Position needs
-  const needsC  = !ROSTER_SLOTS.filter(s=>s.id==='C').some(s=>filled[s.id]);
-  const needsSP = ROSTER_SLOTS.filter(s=>s.id.startsWith('SP')).filter(s=>!filled[s.id]).length > 0;
-  const needsRP = ROSTER_SLOTS.filter(s=>s.id.startsWith('RP')).filter(s=>!filled[s.id]).length > 0;
-  const needsP  = ROSTER_SLOTS.filter(s=>s.id.startsWith('P')).filter(s=>!filled[s.id]).length > 0;
-  const spCount = [...myPickSet].filter(r => (playerMeta[r]||{cats:[]}).cats?.includes?.('K') && (getMeta(r).slots.includes('SP'))).length ||
-                  [...myPickSet].map(r=>players.find(p=>p.rank===r)).filter(Boolean).filter(p=>p.type==='SP').length;
-  const rpCount = [...myPickSet].map(r=>players.find(p=>p.rank===r)).filter(Boolean).filter(p=>p.type==='RP').length;
-  const hCount  = [...myPickSet].map(r=>players.find(p=>p.rank===r)).filter(Boolean).filter(p=>p.type==='H').length;
+  const needsC   = !ROSTER_SLOTS.filter(s=>s.id==='C').some(s=>filled[s.id]);
+  const needsSP  = ROSTER_SLOTS.filter(s=>s.id.startsWith('SP')).filter(s=>!filled[s.id]).length > 0;
+  const needsRP  = ROSTER_SLOTS.filter(s=>s.id.startsWith('RP')).filter(s=>!filled[s.id]).length > 0;
+  const spCount  = [...myPickSet].map(r=>players.find(p=>p.rank===r)).filter(Boolean).filter(p=>p.type==='SP').length;
+  const rpCount  = [...myPickSet].map(r=>players.find(p=>p.rank===r)).filter(Boolean).filter(p=>p.type==='RP').length;
+  const hCount   = [...myPickSet].map(r=>players.find(p=>p.rank===r)).filter(Boolean).filter(p=>p.type==='H').length;
 
-  // Position recommendations
-  if (unfilledSet.length > 0 && totalPicks < 16) {
-    if (needsC) recs.push({icon:'🎯', text:`<strong>FILL CATCHER</strong> — Will Smith (46) and Cal Raleigh (47) are the top OBP catchers available. Catcher is the scarcest position.`});
-    if (needsRP && rpCount < 2) recs.push({icon:'🎯', text:`<strong>ADD CLOSER</strong> — ${rpCount === 0 ? 'You have no closer yet.' : 'Only '+rpCount+' closer.'} Mason Miller (21), Díaz (29), or Cade Smith (30) are the top targets.`});
-    if (needsSP && spCount < 2) recs.push({icon:'🎯', text:`<strong>ADD STARTER</strong> — ${spCount === 0 ? 'No starters yet.' : spCount+' starter(s).'} With 7 pitcher slots and 30 IP minimum/week, you need 3-4 reliable SPs.`});
+  // Round-aware position urgency
+  // Closers: if we're past round 8 and no closer, it's critical
+  if (needsRP && rpCount === 0) {
+    const urgencyText = (nextPick && nextPick.round >= 8)
+      ? `<strong>URGENT — CLOSER NEEDED</strong> — You're in Round ${nextPick ? nextPick.round : currentRound} with no closer. Elite closers (Miller 21, Díaz 29, Smith 30) are gone. Target Durán (32), Muñoz (33), or Bednar (110) immediately.`
+      : `<strong>ADD CLOSER</strong> — No closer yet. Mason Miller (21), Díaz (29), or Cade Smith (30) should be targets in the next 2-3 rounds.`;
+    recs.push({icon:'🎯', text: urgencyText});
   }
 
-  // Category recommendations
+  if (needsC && needsSP && totalPicks < 16) {
+    if (needsC) recs.push({icon:'🎯', text:`<strong>FILL CATCHER</strong> — Will Smith (46) and Cal Raleigh (47) are the top OBP catchers. Catcher is the scarcest position — don't let both go.`});
+    if (needsSP && spCount < 2) recs.push({icon:'🎯', text:`<strong>ADD STARTER</strong> — ${spCount === 0 ? 'No starters yet.' : spCount+' starter(s).'} 7 pitcher slots + 30 IP/week minimum means you need 3-4 reliable SPs.`});
+  }
+
+  // Category recommendations — tier-aware based on what round we're in
   weakCats.slice(0, 3).forEach(({cat, grade}) => {
+    const roundCtx = nextPick ? `(R${nextPick.round} pick coming)` : '';
     const catRecs = {
-      SB: 'Target: Witt (3), Ramirez (5), Acuna (6), De La Cruz (8), Carroll (34), or Keaschall (54). SB is the scarcest category — prioritize 30+ sprint speed profiles.',
-      SV: 'Target: Mason Miller (21), Díaz (29), Cade Smith (30), Durán (32), or Muñoz (33). Draft one elite closer early, stream the rest.',
-      W:  'Target SPs on good offenses — Crochet/BOS (12), Yamamoto/LAD (15), Hunter Brown/HOU (31), or Cole Ragans/KC (27).',
-      OBP:'Target walk-rate driven players: Judge (2), Soto (4), Freeman (20), Schwarber (38), Devers (39). OBP is MOST stable when BB%-driven.',
-      K:  'Target: Skubal (10), Skenes (11), Crochet (12), Ragans (27), Peralta (41). K% is the most predictable pitching category.',
-      HR: 'Target barrel rate 13%+: Judge (1), Ohtani DH (3), Alvarez (16), Olson (35), Alonso (145).',
-      ERA:'Add a ground-ball SP: Webb (26), Valdez (28), Sanchez (22), Kirby (42) or Ragans (27) all have elite ERA floors.',
-      WHIP:'Target low-BB% SPs: Kirby (42) has 2.9% BB%, Gilbert (18) 4.8%. Also Webb (26) and Valdez (28) with elite GB rates.',
-      R:  'Ensure hitters are in high-run lineups: Dodgers (Ohtani DH/Judge/Tucker/Freeman), Yankees, Phillies bats produce the most runs.',
-      RBI:'Power hitters in strong lineups: Alvarez (16), Olson (35), Devers (39). Run-producing context matters more than raw power.',
+      SB: `Target: Witt (2), Ramirez (5), Acuna (6), De La Cruz (8), Carroll (34), Keaschall (54). SB is the scarcest category — prioritize 30+ sprint speed. ${roundCtx}`,
+      SV: `Target: Mason Miller (21), Díaz (29), Cade Smith (30), Durán (32), Muñoz (33). Draft one elite closer early, stream the rest. ${roundCtx}`,
+      W:  `Target SPs on good offenses — Crochet/BOS (12), Yamamoto/LAD (15), Hunter Brown/HOU (31), Cole Ragans/KC (27). ${roundCtx}`,
+      OBP:`Target walk-rate driven players: Judge (1), Soto (4), Freeman (20), Schwarber (38), Devers (39). OBP is MOST stable when BB%-driven. ${roundCtx}`,
+      K:  `Target: Skubal (10), Skenes (11), Crochet (12), Ragans (27), Peralta (41). K% is the most predictable pitching category. ${roundCtx}`,
+      HR: `Target barrel rate 13%+: Judge (1), Ohtani DH (3), Alvarez (16), Olson (35), Alonso (145). ${roundCtx}`,
+      ERA:`Add a ground-ball SP: Webb (26), Valdez (28), Sanchez (22), Kirby (42) all have elite ERA floors. ${roundCtx}`,
+      WHIP:`Target low-BB% SPs: Kirby (42) — 2.9% BB%, Gilbert (18) — 4.8%. Webb (26) and Valdez (28) with elite GB rates. ${roundCtx}`,
+      R:  `Hitters in high-run lineups: Dodgers (Ohtani DH/Judge/Tucker/Freeman), Yankees, Phillies produce the most runs. ${roundCtx}`,
+      RBI:`Power hitters in strong lineups: Alvarez (16), Olson (35), Devers (39). Lineup context matters as much as raw power. ${roundCtx}`,
     };
     recs.push({icon:'📊', text: `<strong>${cat} IS ${grade}-GRADE</strong> — ${catRecs[cat] || 'Target players with multi-category value in this area.'}`});
   });
 
-  // Balance check
+  // Balance check (round-aware)
   if (hCount > 0 && spCount === 0 && totalPicks >= 3) {
-    recs.push({icon:'⚖️', text:`<strong>BALANCE CHECK</strong> — ${hCount} hitters, 0 starters. With 7 pitcher slots and a 30 IP/week minimum, you'll need starting pitching soon.`});
+    recs.push({icon:'⚖️', text:`<strong>BALANCE CHECK</strong> — ${hCount} hitters, 0 starters. With 7 pitcher slots and 30 IP/week minimum, you need starting pitching${nextPick && nextPick.round <= 5 ? ' in the next round or two' : ' soon'}.`});
   }
   if (spCount >= 4 && hCount < 4 && totalPicks >= 6) {
-    recs.push({icon:'⚖️', text:`<strong>BALANCE CHECK</strong> — ${spCount} SPs, only ${hCount} hitters. Counting stats (R, HR, RBI, SB) require hitter depth. Consider a hitter next.`});
+    recs.push({icon:'⚖️', text:`<strong>BALANCE CHECK</strong> — ${spCount} SPs, only ${hCount} hitters. Counting stats (R, HR, RBI, SB) need hitter depth. Take a hitter next.`});
   }
 
   // Late round reminders
   if (totalPicks >= 12) {
-    if (rpCount < 2) recs.push({icon:'💡', text:`<strong>CLOSER DEPTH</strong> — Only ${rpCount} closer. You have 4 RP/P flex spots. Adding a second closer improves SV coverage and ratio protection.`});
-    recs.push({icon:'💡', text:`<strong>LATE ROUND UPSIDE</strong> — Positive regression targets still available: Ben Rice (157), Jac Caglianone (63), Walker (130), Edwin Uceta (200). Check AVAILABLE + ⬆ IMPROVE filter.`});
+    if (rpCount < 2) recs.push({icon:'💡', text:`<strong>CLOSER DEPTH</strong> — Only ${rpCount} closer. You have 4 RP/P flex spots. A second closer improves SV coverage and ratio protection.`});
+    recs.push({icon:'💡', text:`<strong>LATE ROUND UPSIDE</strong> — Positive regression targets available: Ben Rice (157), Jac Caglianone (63), Walker (130), Edwin Uceta (200). Use AVAILABLE + ⬆ IMPROVE filter.`});
   }
 
-  if (recs.length === 0) {
-    recs.push({icon:'✅', text:'<strong>Well-balanced team</strong> — No major gaps detected. Focus on the highest-ranked available player. Use the ⬆ IMPROVE filter to find regression upside.'});
+  if (recs.length === 0 || (recs.length === 1 && draftPos && nextPick)) {
+    recs.push({icon:'✅', text:'<strong>Well-balanced team</strong> — No major gaps. Focus on the highest-ranked available player. Use the ⬆ IMPROVE filter to find regression upside.'});
   }
 
   document.getElementById('recPanel').innerHTML = `
     <div class="rec-title">NEXT PICK GUIDANCE</div>
     ${recs.slice(0,5).map(r => `<div class="rec-item"><span class="rec-icon">${r.icon}</span><span class="rec-text">${r.text}</span></div>`).join('')}
   `;
+}
+
+// ── DRAFT POSITION ENGINE ─────────────────────────────────────
+const DRAFT_SETTINGS_KEY = 'fantasyDraftSettings2026';
+let draftPos    = 0;   // 1-based draft position (0 = not set)
+let totalTeams  = 12;
+let totalRounds = 23;
+
+function loadDraftSettings() {
+  try {
+    const s = localStorage.getItem(DRAFT_SETTINGS_KEY);
+    if (s) {
+      const d = JSON.parse(s);
+      draftPos    = d.pos    || 0;
+      totalTeams  = d.teams  || 12;
+      totalRounds = d.rounds || 23;
+    }
+  } catch(e) {}
+  if (draftPos) {
+    document.getElementById('draftPosition').value = draftPos;
+    document.getElementById('totalTeams').value    = totalTeams;
+    document.getElementById('totalRounds').value   = totalRounds;
+  }
+}
+
+function saveDraftSettings() {
+  try {
+    localStorage.setItem(DRAFT_SETTINGS_KEY, JSON.stringify({
+      pos: draftPos, teams: totalTeams, rounds: totalRounds
+    }));
+  } catch(e) {}
+}
+
+function onDraftSettingsChange() {
+  draftPos    = parseInt(document.getElementById('draftPosition').value)  || 0;
+  totalTeams  = parseInt(document.getElementById('totalTeams').value)     || 12;
+  totalRounds = parseInt(document.getElementById('totalRounds').value)    || 23;
+  saveDraftSettings();
+  renderPickTimeline();
+  updateDashboard();
+  applyFilters(); // re-render rows to update pick-window highlights
+}
+
+// Snake draft: given 1-based draft position, return array of overall pick numbers
+function getMyPickNumbers() {
+  if (!draftPos || draftPos < 1 || draftPos > totalTeams) return [];
+  const picks = [];
+  for (let round = 1; round <= totalRounds; round++) {
+    const isEven = round % 2 === 0;
+    const pickInRound = isEven ? (totalTeams - draftPos + 1) : draftPos;
+    const overall = (round - 1) * totalTeams + pickInRound;
+    picks.push({ round, pickInRound, overall });
+  }
+  return picks;
+}
+
+// How many players are gone by overall pick N (rough estimate)
+// In a 12-team draft each pick = 1 player gone
+function pickWindowForOverall(overall) {
+  // Which player rank is roughly gone by this pick?
+  // Pick 1 = rank 1 gone. Pick 24 = ranks 1-24 gone. etc.
+  return overall;
+}
+
+// Current overall pick number = total picks already made across all teams
+// We estimate it from how many total players are in draftedSet
+function getCurrentOverallPick() {
+  return draftedSet.size + 1; // next pick to happen
+}
+
+// What round are we in right now?
+function getCurrentRound() {
+  const overall = getCurrentOverallPick();
+  return Math.ceil(overall / totalTeams);
+}
+
+// Find my next upcoming pick
+function getNextMyPick() {
+  if (!draftPos) return null;
+  const myPicks = getMyPickNumbers();
+  const currentOverall = getCurrentOverallPick();
+  return myPicks.find(p => p.overall >= currentOverall) || null;
+}
+
+// Find my picks after next (for planning)
+function getFutureMyPicks(n = 5) {
+  if (!draftPos) return [];
+  const myPicks = getMyPickNumbers();
+  const currentOverall = getCurrentOverallPick();
+  return myPicks.filter(p => p.overall >= currentOverall).slice(0, n);
+}
+
+// What's the best available player at a given overall pick number?
+function getBestAvailableAtPick(overallPick) {
+  // By overall pick N, roughly the top N-1 players have been taken
+  // We look at the available (undrafted) players and find those ranked <= overallPick
+  const available = players
+    .filter(p => !draftedSet.has(p.rank))
+    .sort((a, b) => {
+      const ra = a.rank === 201 ? 18.5 : a.rank;
+      const rb = b.rank === 201 ? 18.5 : b.rank;
+      return ra - rb;
+    });
+  // At pick N in a 12-team draft, roughly the top N-1 overall ranks are gone
+  // But we've already marked those as drafted, so just return top available
+  return available.slice(0, 3); // top 3 still available
+}
+
+function renderPickTimeline() {
+  const timeline = document.getElementById('pickTimeline');
+  const banner   = document.getElementById('nextPickBanner');
+
+  if (!draftPos || draftPos < 1 || draftPos > totalTeams) {
+    timeline.innerHTML = '<span class="draft-setup-hint" style="padding:4px 0">Enter your draft position to see your pick schedule →</span>';
+    banner.style.display = 'none';
+    return;
+  }
+
+  const myPicks = getMyPickNumbers();
+  const currentOverall = getCurrentOverallPick();
+  const nextPick = myPicks.find(p => p.overall >= currentOverall);
+  const picksAhead = nextPick ? (nextPick.overall - currentOverall) : 0;
+
+  // Show picks — completed, current window, upcoming
+  const visiblePicks = myPicks.slice(0, Math.min(totalRounds, 23));
+  let html = '';
+  visiblePicks.forEach((pick, i) => {
+    const isCompleted  = pick.overall < currentOverall && myPickSet.size >= pick.round;
+    const isCurrentNext = pick === nextPick;
+    const isFuture     = !isCompleted && !isCurrentNext;
+    // Get tier label for this pick slot
+    const tierLabel = pick.overall <= 12 ? 'T1-2' :
+                      pick.overall <= 36 ? 'T3' :
+                      pick.overall <= 72 ? 'T4-5' :
+                      pick.overall <= 120 ? 'T6-7' : 'T8+';
+    const cls = isCompleted ? 'completed' : isCurrentNext ? 'current-pick' :
+                (i === visiblePicks.findIndex(p => p.overall >= currentOverall) + 1) ? 'next-pick' : '';
+    if (i > 0) html += '<span class="pick-arrow">›</span>';
+    html += `<div class="pick-bubble ${cls}" title="Round ${pick.round}, Pick ${pick.pickInRound} (Overall #${pick.overall})">
+      <span class="pick-round">R${pick.round}</span>
+      <span class="pick-number">#${pick.overall}</span>
+      <span class="pick-avail">${isCompleted ? '✓' : tierLabel}</span>
+    </div>`;
+  });
+  timeline.innerHTML = html;
+
+  // Next pick banner
+  if (nextPick) {
+    const picksAheadText = picksAhead === 0 ? '<strong>ON THE CLOCK NOW</strong>' :
+                           picksAhead === 1 ? '<strong>1 pick away</strong>' :
+                           `<strong>${picksAhead} picks away</strong>`;
+    const tierAtPick = nextPick.overall <= 12  ? 'Tier 1-2 (elite)' :
+                       nextPick.overall <= 36  ? 'Tier 3 (1st/2nd round)' :
+                       nextPick.overall <= 72  ? 'Tier 4-5 (3rd-5th round)' :
+                       nextPick.overall <= 120 ? 'Tier 6-7 (6th-9th round)' :
+                       nextPick.overall <= 168 ? 'Tier 8-9 (10th-14th round)' : 'Tier 10 (streamers)';
+    banner.style.display = 'block';
+    banner.innerHTML = `Round ${nextPick.round} · Pick #${nextPick.overall} overall · ${picksAheadText} · Expect ${tierAtPick} available`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+// Returns the range of overall pick numbers where my next pick falls
+// Used to highlight rows in that tier window in the table
+function getPickWindowRange() {
+  if (!draftPos) return null;
+  const next = getNextMyPick();
+  if (!next) return null;
+  // Show a window of ±6 around the pick (what will roughly still be available)
+  return { lo: Math.max(1, next.overall - 8), hi: next.overall + 4 };
 }
 
 // ── FILTERS ──────────────────────────────────────────────────
@@ -1508,7 +1837,9 @@ function applyFilters() {
 function init() {
   loadDraftState();
   loadMyPicks();
+  loadDraftSettings();
   updateCounters();
+  renderPickTimeline();
   updateDashboard();
   applyFilters();
 }
