@@ -773,10 +773,18 @@ function fillRoster(){
     const cand=remaining().filter(p=>s.accept.includes(p.pos)).sort((a,b)=>b.pts-a.pts)[0];
     if(cand){s.player=cand;used.add(cand.id);}
   });
-  // needs = unfilled slots by accepted positions
+  // needs = unfilled DEDICATED slots (single-position slots only). FLEX and OP are
+  // flexible multi-position slots — they must NOT add a per-position need (that would
+  // e.g. invent a "TE need" from an empty FLEX, even though this league has no TE
+  // starting slot). We track those separately as flags.
   const needs={};
-  slots.filter(s=>!s.player).forEach(s=>s.accept.forEach(pos=>needs[pos]=(needs[pos]||0)+1));
-  return {slots,needs,bench:remaining()};
+  const dedicated=slots.filter(s=>!s.player && s.accept.length===1);
+  dedicated.forEach(s=>needs[s.accept[0]]=(needs[s.accept[0]]||0)+1);
+  const flexSlot=slots.find(s=>s.key==='FLEX');
+  const opSlot=slots.find(s=>s.key==='OP');
+  const flexOpen=flexSlot ? flexSlot.player==null : false;
+  const opOpen=opSlot ? opSlot.player==null : false;
+  return {slots,needs,bench:remaining(),flexOpen,opOpen};
 }
 
 // roster risk balance: -1 (all stable) .. +1 (all boom/bust)
@@ -799,7 +807,7 @@ function availablePlayers(){
 function recommend(){
   const avail=availablePlayers();
   const {done,upcoming,mine}=nextOverallPick();
-  const {needs}=fillRoster();
+  const {needs,flexOpen,opOpen}=fillRoster();
   const bal=rosterBalance();
   const rounds=state.mine.size;                  // players I've actually drafted
   const myQBs=[...state.mine].map(id=>ALL[id]).filter(p=>p.pos==='QB').length; // QB cap tracking
@@ -830,11 +838,10 @@ function recommend(){
     if(pos==='QB') return myQBs<2;             // still filling your 2 QB starters
     return (needs[pos]||0)>0;                  // RB/WR/TE/K/DEF starting slot open
   };
-  // FLEX: RB/WR/TE can also fill the flex slot. Treat a flex-eligible position as a
-  // starting need if the FLEX slot is still open, even when its base slots are full.
-  const flexOpen = (needs.RB||0)+(needs.WR||0)+(needs.TE||0) > 0
-    ? false // base slots still open, flex handled naturally
-    : (fillRoster().slots.find(s=>s.key==='FLEX')||{}).player==null;
+  // FLEX: an open FLEX slot can be filled by RB/WR/TE. When a position's dedicated
+  // slots are all full but the FLEX is still open, a flex-eligible player still fills
+  // a starting spot. (flexOpen comes from fillRoster; this league has NO dedicated TE
+  // slot, so TE only ever reaches the lineup through this FLEX.)
 
   const scored=avail.map(p=>{
     let s=p.vor;                                // base: value over replacement
@@ -860,15 +867,15 @@ function recommend(){
       // skill depth / backup: below starting needs, but ABOVE not-yet-forced K/DEF.
       s -= 150;
       // POSITIONAL OPPORTUNITY: a bench player's real value is his chance of reaching
-      // YOUR lineup. Weight by how many of your starting spots his position can fill —
-      // you start 2 RB + 3 WR + 1 FLEX (6 skill spots a RB/WR can fill) but only 2 QB
-      // (both already filled). So a backup RB/WR is far likelier to start for you than
-      // a 3rd QB, even when the QB's raw VOR looks higher.
-      //   RB  -> RB1, RB2, FLEX               = 3 lineup paths
-      //   WR  -> WR1, WR2, WR3, FLEX          = 4 lineup paths
-      //   TE  -> TE(via flex only here), FLEX = 1-2 paths
-      //   QB  -> QB, OP                        = 2 paths, but both are occupied
-      const opportunity = {WR:4, RB:3, TE:2, QB:2}[p.pos]||1;
+      // YOUR lineup. Weight by how many of your starting spots his position can fill.
+      // THIS LEAGUE HAS NO DEDICATED TE SLOT — a TE's only path in is the single FLEX,
+      // which it shares with every RB and WR. So TE has the FEWEST lineup paths, not a
+      // comparable number. Lineup access by position:
+      //   WR  -> WR1, WR2, WR3, FLEX          = 4 paths
+      //   RB  -> RB1, RB2, FLEX               = 3 paths
+      //   TE  -> FLEX only                    = 1 path  (no TE starting slot)
+      //   QB  -> QB, OP                        = 2 paths, but both filled once you have 2
+      const opportunity = {WR:4, RB:3, QB:2, TE:1}[p.pos]||1;
       s += opportunity*10;                       // reward positions with more lineup access
       if(p.pos==='QB'){
         // A 3rd QB has both his lineup paths already filled by your two studs — he only
